@@ -1,0 +1,14 @@
+This app is an unofficial client for Audiobookshelf
+(https://github.com/advplyr/audiobookshelf) and is not affiliated with it.
+
+It is licensed under the GNU General Public License v3.0 (see LICENSE). It
+bundles the following from the Audiobookshelf 2.36 web client:
+
+- UI strings (client/strings/en-us.json), GPL-3.0
+- absicons font and the placeholder/logo images, GPL-3.0
+- Material Symbols Rounded (Google), Apache License 2.0
+  (Resources/Fonts/licenses/MaterialSymbols-Apache-2.0.txt)
+- Source Sans Pro (Adobe), SIL Open Font License 1.1
+  (Resources/Fonts/licenses/SourceSansPro-OFL.txt)
+- Ubuntu Mono (Canonical), Ubuntu Font Licence 1.0
+  (Resources/Fonts/licenses/UbuntuMono-UFL.txt)
