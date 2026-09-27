@@ -1,0 +1,11 @@
+name: Feature request
+description: Something that would make listening on a Mac better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like
+      description: The problem it solves for you, and how you imagine it working.
+    validations:
+      required: true

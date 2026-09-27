@@ -1,0 +1,28 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.5"
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Audiobookshelf server version
+      placeholder: "2.36.0"
+  - type: input
+    id: commit
+    attributes:
+      label: App commit
+      description: Output of `git rev-parse --short HEAD` in your checkout.
