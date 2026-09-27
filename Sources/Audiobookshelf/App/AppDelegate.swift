@@ -226,6 +226,7 @@ enum URLRoutes {
     func v(_ k: String) -> String? { q.first { $0.name == k }?.value }
     let verb = url.host ?? ""
     let p = PlayerModel.shared
+    let debugRoutes = UserDefaults.standard.bool(forKey: "debugURLRoutes")
     switch verb {
     case "play-pause": p.playPause()
     case "play": if !p.isPlaying { p.resume() }
@@ -266,8 +267,13 @@ enum URLRoutes {
       case "item": if let id = v("id") { app.go(.item(id)) }
       case "author": if let id = v("id") { app.go(.author(id)) }
       case "playitem": if let id = v("id") { Task { await p.play(id) } }
-      case "download": if let id = v("id") { Task { await DownloadManager.shared.download(id) } }
-      case "remove-download": if let id = v("id") { DownloadManager.shared.remove(id) }
+      // Test hooks that change files: any web page can open an
+      // audiobookshelf:// link, so these need `defaults write
+      // com.arturgrochau.audiobookshelf-mac debugURLRoutes -bool true`.
+      case "download" where debugRoutes:
+        if let id = v("id") { Task { await DownloadManager.shared.download(id) } }
+      case "remove-download" where debugRoutes:
+        if let id = v("id") { DownloadManager.shared.remove(id) }
       case "seek": if let t = v("t").flatMap(Double.init) { p.seek(to: t) }
       case "modal":
         switch v("m") ?? "" {

@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: swift build -c release --arch arm64
+      - name: Test
+        # Full Xcode ships Swift Testing where SwiftPM finds it; test.sh adds
+        # the flags only a Command Line Tools install needs.
+        run: swift test

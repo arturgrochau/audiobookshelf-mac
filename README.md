@@ -1,5 +1,7 @@
 # Audiobookshelf for macOS (unofficial)
 
+[![CI](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml/badge.svg)](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+
 A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf). It looks and works like the web client, with the same pages, player controls and wording, but plays audio through AVFoundation and feels like a Mac app.
 
 ![Demo: home shelves, speed and sleep timer, chapters, the mini player over the desktop, library and authors](docs/demo.gif)
