@@ -73,13 +73,32 @@ extension APIClient {
     _ libraryId: String, sort: String = "name", desc: Bool = false, filter: String? = nil,
     limit: Int = 0, page: Int = 0
   ) async throws -> SeriesPage {
-    try await get(
-      SeriesPage.self, "/api/libraries/\(libraryId)/series",
-      query: [
-        "sort": sort, "desc": desc ? "1" : "0", "limit": String(limit), "page": String(page),
-        "minified": "1", "include": "rssfeed",
-      ],
-      rawQuery: filter.map { "filter=\($0)" })
+    // ABS applies SQL LIMIT 0 even when limit is omitted. Fetch all series
+    // in positive pages when the caller asks for the complete list.
+    let pageSize = limit > 0 ? limit : 100
+    var pageNumber = page
+    var results: [Series] = []
+    var seen = Set<String>()
+    while true {
+      try Task.checkCancellation()
+      let response = try await get(
+        SeriesPage.self, "/api/libraries/\(libraryId)/series",
+        query: [
+          "sort": sort, "desc": desc ? "1" : "0", "limit": String(pageSize),
+          "page": String(pageNumber), "minified": "1", "include": "rssfeed",
+        ],
+        rawQuery: filter.map { "filter=\($0)" }, timeout: 60)
+      if limit > 0 { return response }
+      let fresh = response.results.filter { seen.insert($0.id).inserted }
+      results.append(contentsOf: fresh)
+      if page * pageSize + results.count >= response.total {
+        return SeriesPage(results: results, total: response.total)
+      }
+      guard !fresh.isEmpty else {
+        throw APIError.decoding("The server returned an incomplete series list. Please retry.")
+      }
+      pageNumber += 1
+    }
   }
 
   public func seriesDetail(_ libraryId: String, _ seriesId: String) async throws -> Series {
@@ -89,8 +108,9 @@ extension APIClient {
   }
 
   public func collections(_ libraryId: String) async throws -> [ABSCollection] {
+    // ABS 2.36 treats an explicit limit=0 as a zero-length slice on group lists.
     try await get(
-      ResultsPage<ABSCollection>.self, "/api/libraries/\(libraryId)/collections", query: ["limit": "0"]
+      ResultsPage<ABSCollection>.self, "/api/libraries/\(libraryId)/collections"
     ).results
   }
 
@@ -100,7 +120,7 @@ extension APIClient {
 
   public func playlists(_ libraryId: String) async throws -> [Playlist] {
     try await get(
-      ResultsPage<Playlist>.self, "/api/libraries/\(libraryId)/playlists", query: ["limit": "0"]
+      ResultsPage<Playlist>.self, "/api/libraries/\(libraryId)/playlists"
     ).results
   }
 

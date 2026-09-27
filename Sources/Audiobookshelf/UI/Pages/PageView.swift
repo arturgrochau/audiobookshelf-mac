@@ -311,6 +311,27 @@ struct SeriesListPage: View {
     let metrics = CardMetrics.current
     let em = metrics.em
     ScrollView(.vertical) {
+      if let error = store.seriesError {
+        VStack(spacing: 12) {
+          Text("Could not load series").font(Theme.sans(20))
+          Text(error).font(Theme.sans(13)).foregroundStyle(Theme.gray400)
+          Button("Retry") { Task { await store.refreshSeries() } }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(32)
+      } else if store.series.isEmpty {
+        if store.loadingSeries || !store.seriesLoaded {
+          ProgressView().frame(maxWidth: .infinity).padding(48)
+        } else {
+          VStack(spacing: 12) {
+            Text(L.s("MessageBookshelfNoSeries")).font(Theme.sans(24))
+            Text("Books appear here when their metadata includes a series.")
+              .font(Theme.sans(14)).foregroundStyle(Theme.gray400)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(48)
+        }
+      }
       LazyVGrid(
         columns: [
           GridItem(
@@ -325,7 +346,8 @@ struct SeriesListPage: View {
       .padding(.vertical, 2 * em)
     }
     .restoresScroll(.series)
-    .task { if store.series.isEmpty { await store.refreshSeries() } }
+    .refreshable { await store.refreshSeries() }
+    .task { if !store.seriesLoaded && !store.loadingSeries { await store.refreshSeries() } }
   }
 }
 

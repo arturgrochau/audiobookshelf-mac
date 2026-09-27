@@ -239,7 +239,7 @@ struct NarratorsPage: View {
 
 // MARK: Search
 
-/// pages/library/_library/search.vue: books, series, authors for the query.
+/// pages/library/_library/search.vue: items and matching metadata for the query.
 struct SearchPage: View {
   let query: String
   var app = AppModel.shared
@@ -250,7 +250,7 @@ struct SearchPage: View {
     ScrollView(.vertical) {
       VStack(alignment: .leading, spacing: 0) {
         if let r = results {
-          if r.book.isEmpty && r.series.isEmpty && r.authors.isEmpty {
+          if r.isEmpty {
             Text(L.s("MessageNoResults")).font(Theme.sans(20)).foregroundStyle(Theme.gray300)
               .padding(32)
           }
@@ -276,12 +276,47 @@ struct SearchPage: View {
             }
             .padding(.leading, 2 * metrics.em).padding(.vertical, 1.5 * metrics.em)
           }
+          metadataResults(r.narrators, title: L.s("LabelNarrators"), group: "narrators", metrics: metrics)
+          metadataResults(r.tags, title: L.s("LabelTags"), group: "tags", metrics: metrics)
+          metadataResults(r.genres, title: L.s("LabelGenres"), group: "genres", metrics: metrics)
         }
       }
     }
     .task(id: query) {
       guard let lib = app.currentLibraryId else { return }
       results = try? await app.api.search(lib, q: query, limit: 25)
+    }
+  }
+
+  @ViewBuilder private func metadataResults(
+    _ matches: [SearchResults.NameCount], title: String, group: String, metrics: CardMetrics
+  ) -> some View {
+    if !matches.isEmpty {
+      VStack(alignment: .leading, spacing: 8) {
+        Text(title).font(Theme.sans(metrics.em, .semibold)).foregroundStyle(Theme.gray100)
+        ForEach(matches, id: \.name) { match in
+          Button {
+            app.go(.filtered(FilterEncoding.filter(group, match.name)))
+          } label: {
+            HStack(spacing: 12) {
+              Text(match.name).foregroundStyle(.white)
+              if let count = match.numBooks ?? match.numItems {
+                Text("\(count) \(L.s("LabelBooks"))").foregroundStyle(Theme.gray400)
+              }
+              Spacer()
+              Image(systemName: "chevron.right").foregroundStyle(Theme.gray400)
+            }
+            .font(Theme.sans(14))
+            .padding(12)
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .hoverHighlight()
+          .linkCursor()
+        }
+      }
+      .padding(.horizontal, 2 * metrics.em)
+      .padding(.vertical, 1.5 * metrics.em)
     }
   }
 }

@@ -436,9 +436,13 @@ public struct Series: Codable, Sendable, Hashable, Identifiable {
   public var totalDuration: Double?
 }
 
-public struct SeriesPage: Decodable, Sendable {
+public struct SeriesPage: Codable, Sendable {
   public var results: [Series]
   public var total: Int
+  public init(results: [Series], total: Int) {
+    self.results = results
+    self.total = total
+  }
   enum CodingKeys: String, CodingKey { case results, total }
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -739,6 +743,11 @@ public struct SearchResults: Decodable, Sendable {
   public var narrators: [NameCount]
   public var tags: [NameCount]
   public var genres: [NameCount]
+
+  public var isEmpty: Bool {
+    book.isEmpty && series.isEmpty && authors.isEmpty && narrators.isEmpty && tags.isEmpty
+      && genres.isEmpty
+  }
 
   enum CodingKeys: String, CodingKey { case book, series, authors, narrators, tags, genres }
   public init(from decoder: Decoder) throws {

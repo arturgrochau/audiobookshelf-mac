@@ -12,6 +12,9 @@ final class LibraryStore {
   var items: [LibraryItem] = []
   var itemsLoaded = false
   var series: [Series] = []
+  var seriesLoaded = false
+  var loadingSeries = false
+  var seriesError: String?
   var collections: [ABSCollection] = []
   var playlists: [Playlist] = []
   var authors: [Author] = []
@@ -26,6 +29,7 @@ final class LibraryStore {
   private var libId: String? { app.currentLibraryId }
   private var refreshTask: Task<Void, Never>?
   private var socketHooked = false
+  private var seriesRequest = UUID()
 
   private init() {}
 
@@ -42,6 +46,10 @@ final class LibraryStore {
     items = []
     itemsLoaded = false
     series = []
+    seriesLoaded = false
+    loadingSeries = false
+    seriesError = nil
+    seriesRequest = UUID()
     collections = []
     playlists = []
     authors = []
@@ -69,6 +77,7 @@ final class LibraryStore {
       let p = try? JSONDecoder().decode(SeriesPage.self, from: d)
     {
       series = p.results
+      seriesLoaded = true
     }
     if let c = DiskCache.shared.load([ABSCollection].self, key("collections")) { collections = c }
     if let p = DiskCache.shared.load([Playlist].self, key("playlists")) { playlists = p }
@@ -87,6 +96,10 @@ final class LibraryStore {
     items = []
     itemsLoaded = false
     series = []
+    seriesLoaded = false
+    loadingSeries = false
+    seriesError = nil
+    seriesRequest = UUID()
     collections = []
     playlists = []
     authors = []
@@ -101,13 +114,14 @@ final class LibraryStore {
     if shelves.isEmpty, libId != nil { loadingHome = true }
     refreshTask?.cancel()
     refreshTask = Task {
-      await refreshHome()
-      await refreshItems()
-      await refreshSeries()
-      await refreshCollections()
-      await refreshPlaylists()
-      await refreshAuthors()
-      await refreshNarrators()
+      let refreshes = [
+        refreshHome, refreshItems, refreshSeries, refreshCollections,
+        refreshPlaylists, refreshAuthors, refreshNarrators,
+      ]
+      for refresh in refreshes {
+        guard !Task.isCancelled else { return }
+        await refresh()
+      }
     }
   }
 
@@ -142,16 +156,23 @@ final class LibraryStore {
   }
 
   func refreshSeries() async {
-    guard let id = libId else { return }
+    guard let id = libId, !Task.isCancelled else { return }
+    let request = UUID()
+    seriesRequest = request
+    loadingSeries = true
+    seriesError = nil
+    defer { if seriesRequest == request { loadingSeries = false } }
     do {
-      let (d, _) = try await api.data(
-        "GET", "/api/libraries/\(id)/series",
-        query: ["limit": "0", "minified": "1", "sort": "name", "desc": "0"], timeout: 60)
-      let page = try JSONDecoder().decode(SeriesPage.self, from: d)
-      guard id == libId else { return }
+      let page = try await api.series(id)
+      let d = try JSONEncoder().encode(page)
+      guard id == libId, seriesRequest == request, !Task.isCancelled else { return }
       series = page.results
+      seriesLoaded = true
       DiskCache.shared.saveRaw(d, key("series"))
-    } catch {}
+    } catch {
+      guard id == libId, seriesRequest == request, !Task.isCancelled else { return }
+      seriesError = (error as? APIError)?.description ?? error.localizedDescription
+    }
   }
 
   func refreshCollections() async {
@@ -208,6 +229,10 @@ final class LibraryStore {
         if expanded[it.id] != nil { expanded[it.id] = it }
       }
       scheduleRefresh(home: true, items: true)
+      debounced("series") { await self.refreshSeries() }
+      debounced("authors") { await self.refreshAuthors() }
+      debounced("narrators") { await self.refreshNarrators() }
+      debounced("metadata") { await self.app.refreshLibraryMeta() }
     case "user_updated":
       revision += 1
       scheduleRefresh(home: true, items: false)
@@ -215,14 +240,16 @@ final class LibraryStore {
       // Fires on every sync of our own session (10 s); the web only updates
       // local state here. PlayerModel applies the progress itself.
       revision += 1
-    case "series_updated", "series_removed":
+    case "series_added", "series_updated", "series_removed":
       debounced("series") { await self.refreshSeries() }
+      debounced("metadata") { await self.app.refreshLibraryMeta() }
     case "collection_added", "collection_updated", "collection_removed":
       debounced("collections") { await self.refreshCollections() }
     case "playlist_added", "playlist_updated", "playlist_removed":
       debounced("playlists") { await self.refreshPlaylists() }
-    case "author_updated", "author_removed":
+    case "author_added", "author_updated", "author_removed":
       debounced("authors") { await self.refreshAuthors() }
+      debounced("metadata") { await self.app.refreshLibraryMeta() }
     default: break
     }
   }

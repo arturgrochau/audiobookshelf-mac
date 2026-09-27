@@ -376,9 +376,7 @@ struct SearchSuggestions: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       if let r = results {
-        if r.book.isEmpty && r.authors.isEmpty && r.series.isEmpty && r.narrators.isEmpty
-          && r.tags.isEmpty && r.genres.isEmpty
-        {
+        if r.isEmpty {
           Text(L.s("MessageNoResults")).font(Theme.sans(14)).foregroundStyle(Theme.gray300).padding(
             12)
         }

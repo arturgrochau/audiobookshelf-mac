@@ -284,6 +284,33 @@ func sampleTimeline() -> Timeline {
 }
 
 @Suite struct ModelTests {
+  @Test func populatedSeriesKeepsBooksAndCovers() throws {
+    let json = """
+      {"results":[{"id":"series-1","name":"A Series","books":[
+        {"id":"book-1","media":{"coverPath":"/covers/one.jpg","metadata":{"title":"One"}}},
+        {"id":"book-2","media":{"coverPath":"/covers/two.jpg","metadata":{"title":"Two"}}}
+      ],"totalDuration":7200}],"total":1}
+      """
+    let page = try JSONDecoder().decode(SeriesPage.self, from: Data(json.utf8))
+    #expect(page.total == 1)
+    let series = try #require(page.results.first)
+    #expect(series.name == "A Series")
+    #expect(series.books?.map(\.id) == ["book-1", "book-2"])
+    #expect(series.books?.map(\.media.coverPath) == ["/covers/one.jpg", "/covers/two.jpg"])
+    #expect(series.totalDuration == 7200)
+  }
+
+  @Test(arguments: ["narrators", "tags", "genres"])
+  func metadataOnlySearchIsNotEmpty(_ group: String) throws {
+    let json = """
+      {"book":[],"series":[],"authors":[],"\(group)": [{"name":"A match","numItems":2}]}
+      """
+    let results = try JSONDecoder().decode(SearchResults.self, from: Data(json.utf8))
+    #expect(!results.isEmpty)
+    let empty = try JSONDecoder().decode(SearchResults.self, from: Data("{}".utf8))
+    #expect(empty.isEmpty)
+  }
+
   @Test func decodesPlaySessionWithManyTracks() throws {
     // Regression: every track is kept, with its offset (multi-file books).
     let json = """
@@ -316,5 +343,141 @@ func sampleTimeline() -> Timeline {
     let d = try JSONEncoder().encode(SyncBody(currentTime: 12.5, timeListened: 10))
     let o = try JSONSerialization.jsonObject(with: d) as! [String: Any]
     #expect(o["currentTime"] is Double && o["timeListened"] is Double)
+  }
+}
+
+@Suite struct LibraryQueryTests {
+  @Test func minifiedSeriesUsesFilterDataAndNumericSequence() throws {
+    let json = """
+      {"results":[
+        {"id":"ten","media":{"metadata":{"title":"Ten","seriesName":"Saga #10"}}},
+        {"id":"other","media":{"metadata":{"title":"Other","seriesName":"Other Saga #1"}}},
+        {"id":"two-half","media":{"metadata":{"title":"Two and a half","seriesName":"Saga #2.5"}}},
+        {"id":"two","media":{"metadata":{"title":"Two","seriesName":"Saga #2"}}},
+        {"id":"standalone","media":{"metadata":{"title":"Standalone","seriesName":""}}}
+      ],"total":5}
+      """
+    let page = try JSONDecoder().decode(ItemsPage.self, from: Data(json.utf8))
+    let filterData = try JSONDecoder().decode(
+      FilterData.self,
+      from: Data(#"{"series":[{"id":"series-1","name":"Saga"}]}"#.utf8))
+    let context = LibraryQuery.Context(
+      seriesById: Dictionary(uniqueKeysWithValues: (filterData.series ?? []).map { ($0.id, $0.name) }))
+    let books = LibraryQuery.apply(
+      page.results, filter: FilterEncoding.filter("series", "series-1"), sort: "sequence",
+      desc: false, ctx: context)
+    #expect(books.map(\.id) == ["two", "two-half", "ten"])
+  }
+}
+
+private final class GroupListProtocol: URLProtocol {
+  override class func canInit(with request: URLRequest) -> Bool {
+    request.url?.host == "abs.test"
+  }
+
+  override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+  override func startLoading() {
+    guard let url = request.url else { return }
+    let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    if url.lastPathComponent == "series" {
+      let library = url.deletingLastPathComponent().lastPathComponent
+      let limit = Int(query.first { $0.name == "limit" }?.value ?? "0") ?? 0
+      let page = Int(query.first { $0.name == "page" }?.value ?? "0") ?? 0
+      // Bound a broken pagination loop without letting an HTTP error satisfy decoding-error tests.
+      guard page < 5 else { respond(url, status: 500, body: "{}"); return }
+      let total = library == "empty" ? 0 : 205
+      let start = library == "repeated" ? 0 : page * limit
+      let end = min(start + max(0, limit), total)
+      let rows: [[String: String]] = library == "incomplete" || limit <= 0 || start >= end
+        ? [] : (start..<end).map { ["id": "series-\($0)", "name": "Series \($0)"] }
+      let data = try! JSONSerialization.data(withJSONObject: ["results": rows, "total": total])
+      respond(url, body: String(decoding: data, as: UTF8.self))
+      return
+    }
+    let limitedToZero = query.contains { $0.name == "limit" && $0.value == "0" }
+    let group: String
+    switch url.path {
+    case "/api/libraries/library-1/collections":
+      group = #"{"id":"collection-1","name":"Saved books","books":[]}"#
+    case "/api/libraries/library-1/playlists":
+      group = #"{"id":"playlist-1","name":"Listen next","items":[]}"#
+    default:
+      client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
+      return
+    }
+    // ABS 2.36 slices group results to zero when the query contains limit="0".
+    let body = "{\"results\":[\(limitedToZero ? "" : group)],\"total\":1}"
+    respond(url, body: body)
+  }
+
+  private func respond(_ url: URL, status: Int = 200, body: String) {
+    let response = HTTPURLResponse(
+      url: url, statusCode: status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+    client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+    client?.urlProtocol(self, didLoad: Data(body.utf8))
+    client?.urlProtocolDidFinishLoading(self)
+  }
+
+  override func stopLoading() {}
+}
+
+@Suite struct GroupEndpointTests {
+  private func client() -> APIClient {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [GroupListProtocol.self]
+    let session = URLSession(configuration: configuration)
+    return APIClient(
+      baseURL: URL(string: "https://abs.test"),
+      tokens: TokenStore(access: "test-token", refresh: nil, persist: { _, _ in }), session: session)
+  }
+
+  @Test func collectionsAndPlaylistsPopulateOnABS236() async throws {
+    let api = client()
+    defer { api.session.invalidateAndCancel() }
+    let collections = try await api.collections("library-1")
+    let playlists = try await api.playlists("library-1")
+    #expect(collections.map(\.id) == ["collection-1"])
+    #expect(playlists.map(\.id) == ["playlist-1"])
+  }
+
+  @Test func defaultSeriesRequestLoadsEveryPage() async throws {
+    let api = client()
+    defer { api.session.invalidateAndCancel() }
+    let page = try await api.series("populated")
+    #expect(page.total == 205)
+    #expect(page.results.map(\.id) == (0..<205).map { "series-\($0)" })
+    let cached = try JSONDecoder().decode(SeriesPage.self, from: JSONEncoder().encode(page))
+    #expect(cached.results.map(\.id) == page.results.map(\.id))
+    #expect(cached.total == 205)
+  }
+
+  @Test func positiveSeriesLimitReturnsRequestedPage() async throws {
+    let api = client()
+    defer { api.session.invalidateAndCancel() }
+    let page = try await api.series("populated", limit: 2, page: 2)
+    #expect(page.total == 205)
+    #expect(page.results.map(\.id) == ["series-4", "series-5"])
+  }
+
+  @Test func emptySeriesLibrarySucceeds() async throws {
+    let api = client()
+    defer { api.session.invalidateAndCancel() }
+    let page = try await api.series("empty")
+    #expect(page.total == 0)
+    #expect(page.results.isEmpty)
+  }
+
+  @Test(arguments: ["incomplete", "repeated"])
+  func inconsistentSeriesPaginationFails(_ library: String) async {
+    let api = client()
+    defer { api.session.invalidateAndCancel() }
+    do {
+      _ = try await api.series(library)
+      Issue.record("Incomplete or repeated Series results must fail")
+    } catch APIError.decoding {
+    } catch {
+      Issue.record("Expected a Series decoding error, received \(error)")
+    }
   }
 }

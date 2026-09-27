@@ -6,7 +6,7 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 
 ![Demo: home shelves, speed and sleep timer, chapters, the mini player over the desktop, library and authors](docs/demo.gif)
 
-<sub>24 seconds, sped up 1.25x. [MP4 version](docs/demo.mp4).</sub>
+<sub>19 seconds, sped up 1.25x. [MP4 version](docs/demo.mp4).</sub>
 
 ## Listening
 

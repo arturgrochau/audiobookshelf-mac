@@ -4,7 +4,7 @@ import Foundation
 import Observation
 
 /// Downloads a book's audio files, cover and expanded item JSON into
-/// `<downloads>/<Author>/<Title>/` (mobile AbsDownloader.kt layout).
+/// `<downloads>/<Author>/<Title> [<item ID>]/`.
 ///
 /// Three files download at once; a file that fails or stalls for 60 s is
 /// retried up to 5 times (resuming when possible); a 401 refreshes the token
@@ -160,8 +160,16 @@ final class DownloadManager: NSObject {
     }
     let author = Self.clean(item.authorLine.isEmpty ? "Unknown Author" : item.authorLine)
     let title = Self.clean(item.title.isEmpty ? item.id : item.title)
-    let folder = root.appendingPathComponent(author, isDirectory: true).appendingPathComponent(
-      title, isDirectory: true)
+    let folder: URL
+    if let rec = records[itemId],
+      !records.values.contains(where: { $0.itemId != itemId && $0.folder == rec.folder })
+    {
+      // Keep existing paths when resuming downloads made by earlier versions.
+      folder = URL(fileURLWithPath: rec.folder, isDirectory: true)
+    } else {
+      folder = root.appendingPathComponent(author, isDirectory: true).appendingPathComponent(
+        "\(title) [\(Self.clean(item.id))]", isDirectory: true)
+    }
     try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     if let d = try? JSONEncoder().encode(item) {
       try? d.write(to: folder.appendingPathComponent("item.json"))
@@ -207,7 +215,9 @@ final class DownloadManager: NSObject {
   }
 
   func remove(_ itemId: String) {
-    if let rec = records[itemId] {
+    if let rec = records[itemId],
+      !records.values.contains(where: { $0.itemId != itemId && $0.folder == rec.folder })
+    {
       try? FileManager.default.removeItem(atPath: rec.folder)
       let parent = URL(fileURLWithPath: rec.folder).deletingLastPathComponent()
       if (try? FileManager.default.contentsOfDirectory(atPath: parent.path))?.isEmpty == true {
