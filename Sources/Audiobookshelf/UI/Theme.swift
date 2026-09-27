@@ -41,20 +41,17 @@ enum Theme {
     .map { Color(hex: $0) },
     startPoint: .topLeading, endPoint: .bottomTrailing)
 
-  static let railWidth: CGFloat = 80
+  static let railWidth: CGFloat = 72
   static let toolbarHeight: CGFloat = 40
   static let appBarHeight: CGFloat = 52
-  static let playerHeight: CGFloat = 160
+  static let playerHeight: CGFloat = 96
 
   // MARK: Fonts
 
+  /// The web's Source Sans sizes, drawn in the system font. SF runs larger at
+  /// the same point size, so 0.92 keeps the web's layout metrics.
   static func sans(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-    switch weight {
-    case .light, .thin, .ultraLight: return .custom("SourceSansPro-Light", size: size)
-    case .semibold, .bold, .heavy, .black, .medium:
-      return .custom("SourceSansPro-SemiBold", size: size)
-    default: return .custom("SourceSansPro-Regular", size: size)
-    }
+    .system(size: (size * 0.92).rounded(), weight: weight == .bold ? .semibold : weight)
   }
 
   static func mono(_ size: CGFloat) -> Font { .custom("UbuntuMono-Regular", size: size) }

@@ -44,30 +44,32 @@ struct BookCard: View {
         }
       }
       .frame(width: w, height: metrics.coverHeight)
-      .clipShape(RoundedRectangle(cornerRadius: 2))
-      .shadow(color: Color(hex: 0x111111, opacity: 0.4), radius: 4, x: 3, y: 1)
-      .onHover { hover = $0 }
+      .clipShape(RoundedRectangle(cornerRadius: 6))
+      .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
+      .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hover = h } }
       .onTapGesture { open() }
       .contextMenu { ItemMenu(item: item, shelfId: shelfId) }
 
       VStack(alignment: .leading, spacing: 0) {
         Text(item.collapsedSeries?.name ?? item.title)
-          .font(Theme.sans(0.9 * em))
-          .foregroundStyle(.white)
+          .font(.system(size: 0.8 * em, weight: .medium))
+          .foregroundStyle(Theme.gray100)
           .lineLimit(1)
         if AppSettings.shared.showSubtitles, let sub = item.media.metadata.subtitle, !sub.isEmpty {
-          Text(sub).font(Theme.sans(0.6 * em)).foregroundStyle(.white).lineLimit(1)
+          Text(sub).font(.system(size: 0.65 * em)).foregroundStyle(Theme.gray300).lineLimit(1)
         }
         Text(item.authorLine)
-          .font(Theme.sans(0.8 * em))
+          .font(.system(size: 0.72 * em))
           .foregroundStyle(Theme.gray400)
           .lineLimit(1)
+          .padding(.top, 1)
         if let sortLine {
-          Text(sortLine).font(Theme.sans(0.8 * em)).foregroundStyle(Theme.gray400).lineLimit(1)
+          Text(sortLine).font(.system(size: 0.72 * em)).foregroundStyle(Theme.gray500).lineLimit(1)
         }
       }
       .frame(width: w, alignment: .leading)
-      .padding(.vertical, 0.5 * em)
+      .padding(.top, 0.55 * em)
+      .padding(.bottom, 0.5 * em)
     }
   }
 
@@ -87,8 +89,8 @@ struct BookCard: View {
         VStack {
           Spacer()
           HStack(spacing: 0) {
-            Rectangle().fill(finished ? Theme.success : Theme.yellow400).frame(
-              width: w * CGFloat(min(1, pct)), height: 0.25 * em)
+            Rectangle().fill(finished ? Theme.success : Theme.accent).frame(
+              width: w * CGFloat(min(1, pct)), height: 3)
             Spacer(minLength: 0)
           }
         }
@@ -98,7 +100,7 @@ struct BookCard: View {
           HStack {
             Spacer()
             Text("#\(seq)")
-              .font(Theme.sans(0.8 * em))
+              .font(.system(size: 0.7 * em, weight: .semibold))
               .foregroundStyle(.white)
               .padding(.horizontal, 0.25 * em)
               .padding(.vertical, 0.1 * em)
@@ -113,8 +115,8 @@ struct BookCard: View {
         VStack {
           Spacer()
           HStack {
-            Icon("download_done", size: 0.9 * em).foregroundStyle(.white.opacity(0.9))
-              .padding(0.2 * em).background(Circle().fill(Color.black.opacity(0.6)))
+            Image(systemName: "arrow.down.circle.fill").font(.system(size: 0.9 * em))
+              .foregroundStyle(.white.opacity(0.9), Color.black.opacity(0.55))
             Spacer()
           }
         }
@@ -122,19 +124,24 @@ struct BookCard: View {
         .padding(.bottom, 0.25 * em)
       }
       if hover {
-        Color.black.opacity(0.4)
+        Color.black.opacity(0.25)
         playButton(em: em)
         VStack {
           Spacer()
           HStack {
             if let fmt = item.media.ebookFormat {
-              Text(fmt).font(Theme.sans(0.8 * em)).foregroundStyle(.white.opacity(0.8))
+              Text(fmt.uppercased()).font(.system(size: 0.6 * em, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
             }
             Spacer()
             Menu {
               ItemMenu(item: item, shelfId: shelfId)
             } label: {
-              Icon("more_vert", size: 1.2 * em).foregroundStyle(Theme.gray200)
+              Image(systemName: "ellipsis").font(.system(size: 0.8 * em, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 1.6 * em, height: 1.6 * em)
+                .background(Circle().fill(Color.black.opacity(0.45)))
+                .contentShape(Circle())
             }
             .menuStyle(.button)
             .buttonStyle(.plain)
@@ -156,11 +163,14 @@ struct BookCard: View {
         Task { await PlayerModel.shared.play(item.id) }
       }
     } label: {
-      Icon(
-        ebookOnly ? "auto_stories" : "play_arrow", size: max(2, 3 * metrics.m) * 16, filled: true
-      )
-      .foregroundStyle(Theme.gray200)
-      .shadow(color: .black.opacity(0.5), radius: 3)
+      let d = max(34, 2.6 * em)
+      Image(systemName: ebookOnly ? "book.fill" : "play.fill")
+        .font(.system(size: d * 0.38, weight: .semibold))
+        .foregroundStyle(Theme.primary)
+        .offset(x: ebookOnly ? 0 : d * 0.04)
+        .frame(width: d, height: d)
+        .background(Circle().fill(.white))
+        .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
     }
     .buttonStyle(ScaleOnHover())
   }
@@ -171,7 +181,7 @@ struct BookCard: View {
         HStack {
           Spacer()
           Text("\(cs.numBooks ?? 0)")
-            .font(Theme.sans(0.8 * em, .semibold))
+            .font(.system(size: 0.7 * em, weight: .semibold))
             .foregroundStyle(.white)
             .frame(minWidth: 1.5 * em, minHeight: 1.5 * em)
             .background(Theme.seriesBadge)
@@ -193,8 +203,7 @@ struct ScaleOnHover: ButtonStyle {
   @State private var hover = false
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(hover ? 1.1 : 1)
-      .foregroundStyle(hover ? .white : Theme.gray200)
+      .scaleEffect(configuration.isPressed ? 0.94 : hover ? 1.06 : 1)
       .onHover { h in withAnimation(.easeOut(duration: 0.1)) { hover = h } }
   }
 }
@@ -259,17 +268,17 @@ struct AuthorCard: View {
     ZStack(alignment: .bottom) {
       Theme.primary
       if let url = app.authorImageURL(author) {
-        RemoteImage(url: url, pixelWidth: Int(w * 2)) { silhouette(w) }
+        RemoteImage(url: url, pixelWidth: Int(w * 2)) { silhouette(w, h) }
           .frame(width: w, height: h)
           .clipped()
       } else {
-        silhouette(w)
+        silhouette(w, h)
       }
       VStack(spacing: 2) {
-        Text(author.name).font(Theme.sans(0.75 * 16 * m, .semibold)).lineLimit(1)
+        Text(author.name).font(.system(size: 0.75 * 16 * m, weight: .semibold)).lineLimit(1)
         if let n = author.numBooks {
-          Text("\(n) \(L.s("LabelBooks"))").font(Theme.sans(0.65 * 16 * m)).foregroundStyle(
-            Theme.gray200)
+          Text(n == 1 ? "1 book" : "\(n) books").font(.system(size: 0.65 * 16 * m))
+            .foregroundStyle(Theme.gray200)
         }
       }
       .foregroundStyle(.white)
@@ -284,8 +293,12 @@ struct AuthorCard: View {
     .onTapGesture { app.go(.author(author.id)) }
   }
 
-  private func silhouette(_ w: CGFloat) -> some View {
-    Icon("person", size: w * 0.6, filled: true).foregroundStyle(.white.opacity(0.6))
+  /// Centred in the space above the name bar (the card's stack is bottom-aligned).
+  private func silhouette(_ w: CGFloat, _ h: CGFloat) -> some View {
+    Image(systemName: "person.fill").font(.system(size: w * 0.36))
+      .foregroundStyle(Theme.gray600)
+      .padding(.bottom, h * 0.16)
+      .frame(width: w, height: h)
   }
 }
 
@@ -328,7 +341,7 @@ struct SeriesCard: View {
           HStack {
             Spacer()
             Text("\(series.books?.count ?? 0)")
-              .font(Theme.sans(0.8 * em, .semibold))
+              .font(.system(size: 0.7 * em, weight: .semibold))
               .foregroundStyle(.white)
               .frame(minWidth: 1.5 * em, minHeight: 1.5 * em)
               .background(Theme.seriesBadge)
@@ -339,20 +352,19 @@ struct SeriesCard: View {
         }
         .padding(0.375 * em)
         if hover {
-          Color.black.opacity(0.6)
-          Text(series.name).font(Theme.sans(1.2 * em)).foregroundStyle(.white)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, maxHeight: .infinity).padding(em)
+          Color.black.opacity(0.25)
         }
       }
       .frame(width: w, height: h)
-      .clipShape(RoundedRectangle(cornerRadius: 2))
-      .shadow(color: Color(hex: 0x111111, opacity: 0.4), radius: 4, x: 3, y: 1)
-      .onHover { hover = $0 }
+      .clipShape(RoundedRectangle(cornerRadius: 6))
+      .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
+      .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hover = h } }
       .onTapGesture { app.go(.seriesDetail(series.id)) }
-      Text(series.name).font(Theme.sans(0.9 * em)).foregroundStyle(.white).lineLimit(1)
+      Text(series.name).font(.system(size: 0.8 * em, weight: .medium))
+        .foregroundStyle(Theme.gray100).lineLimit(1)
         .frame(width: w, alignment: .leading)
-        .padding(.vertical, 0.5 * em)
+        .padding(.top, 0.55 * em)
+        .padding(.bottom, 0.5 * em)
     }
   }
 
@@ -363,7 +375,7 @@ struct SeriesCard: View {
     if !books.isEmpty, done > 0 || started {
       let frac = CGFloat(done) / CGFloat(books.count)
       HStack(spacing: 0) {
-        Rectangle().fill(done == books.count ? Theme.success : Theme.yellow400).frame(
+        Rectangle().fill(done == books.count ? Theme.success : Theme.accent).frame(
           width: max(2, (w - 0.75 * em) * frac), height: 0.25 * em)
         Spacer(minLength: 0)
       }

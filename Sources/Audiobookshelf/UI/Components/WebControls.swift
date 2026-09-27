@@ -91,8 +91,8 @@ struct HoverIcon: View {
   }
 }
 
-/// `modals-modal`: full-window dimmed backdrop, header top-left, ✕ top-right,
-/// the content card centered. Esc or a click on the backdrop closes it.
+/// `modals-modal` as a sheet: a dimmed window, one card holding its own title
+/// and ✕. Esc or a click on the backdrop closes it.
 struct WebModal<Content: View>: View {
   let title: String
   let width: CGFloat
@@ -101,35 +101,32 @@ struct WebModal<Content: View>: View {
 
   var body: some View {
     ZStack {
-      Theme.primary.opacity(0.75)
-        .overlay(alignment: .top) {
-          LinearGradient(
-            colors: [Theme.black500.opacity(0.9), .clear], startPoint: .top, endPoint: .bottom
-          )
-          .frame(height: 144)
-          .allowsHitTesting(false)
-        }
+      Color.black.opacity(0.45)
         .contentShape(Rectangle())
         .onTapGesture { isPresented = false }
       VStack(spacing: 0) {
+        HStack {
+          Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+            .lineLimit(1)
+          Spacer()
+          SymbolButton(symbol: "xmark", size: 11, weight: .bold, help: "Close") {
+            isPresented = false
+          }
+        }
+        .padding(.leading, 20)
+        .padding(.trailing, 12)
+        .frame(height: 48)
         content()
       }
       .frame(width: width)
       .frame(minWidth: 380)
+      .background(RoundedRectangle(cornerRadius: 14).fill(Theme.primary))
+      .clipShape(RoundedRectangle(cornerRadius: 14))
+      .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.08)))
+      .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
       .environment(\.colorScheme, .dark)
     }
-    .overlay(alignment: .topLeading) {
-      Text(title)
-        .font(Theme.sans(30))
-        .foregroundStyle(.white)
-        .lineLimit(1)
-        .padding(20)
-        .allowsHitTesting(false)
-    }
-    .overlay(alignment: .topTrailing) {
-      HoverIcon(icon: "close", size: 36, color: Theme.gray200) { isPresented = false }
-        .padding(20)
-    }
+    .onExitCommand { isPresented = false }
     .transition(.opacity)
   }
 }
@@ -142,7 +139,8 @@ struct ToastStack: View {
     VStack(alignment: .trailing, spacing: 8) {
       ForEach(toasts) { t in
         HStack(spacing: 10) {
-          Icon(icon(t.kind), size: 20).foregroundStyle(.white)
+          Image(systemName: icon(t.kind)).font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(.white)
           Text(t.text).font(Theme.sans(15)).foregroundStyle(.white).fixedSize(
             horizontal: false, vertical: true)
         }
@@ -171,10 +169,10 @@ struct ToastStack: View {
 
   func icon(_ k: Toast.Kind) -> String {
     switch k {
-    case .info: return "info"
-    case .success: return "check_circle"
-    case .warning: return "warning"
-    case .error: return "error"
+    case .info: return "info.circle.fill"
+    case .success: return "checkmark.circle.fill"
+    case .warning: return "exclamationmark.triangle.fill"
+    case .error: return "xmark.octagon.fill"
     }
   }
 }

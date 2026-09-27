@@ -3,6 +3,7 @@ import AVFoundation
 import AppKit
 import Foundation
 import Observation
+import SwiftUI
 
 /// Web queue entry (store/globals.js playerQueueItems).
 struct QueueItem: Identifiable, Hashable, Codable {
@@ -383,6 +384,27 @@ final class PlayerModel {
   /// Keyboard speed changes are not saved on the web; they still apply.
   private var liveRateOverride: Double?
 
+  /// Last speed key press, drawn as a brief "2x" over the window.
+  struct SpeedFlashState: Equatable {
+    let id = UUID()
+    let rate: Double
+  }
+  private(set) var speedFlash: SpeedFlashState?
+
+  /// S / A / X toggle 2x / 1.5x / 1.2x against 1x, Z returns to 1x: the same
+  /// grammar as common video-speed key layouts. Saved, so a
+  /// book started later keeps the speed.
+  func toggleRate(_ target: Double) {
+    let r = abs(rate - target) < 0.08 ? 1 : target
+    setRate(r)
+    let flash = SpeedFlashState(rate: r)
+    withAnimation(.easeOut(duration: 0.12)) { speedFlash = flash }
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(700))
+      if speedFlash == flash { withAnimation(.easeIn(duration: 0.25)) { speedFlash = nil } }
+    }
+  }
+
   func increaseRate() {
     let step = settings.playbackRateIncrementDecrement
     guard rate + step <= 10 + 0.0001 else { return }
@@ -511,6 +533,8 @@ final class PlayerModel {
         restoreFade()
         if let body = sync.eventSync(currentTime: t) { send(body) }
         app.toast(L.s("ToastSleepTimerDone"), .info)
+        // The sleep timer means "I am going to sleep": let the Mac sleep too.
+        KeepAwake.shared.sleepTimerFired()
       }
     }
     if Int(now.timeIntervalSince1970) % 15 == 0 {
@@ -521,6 +545,7 @@ final class PlayerModel {
 
   private func enginePlayingChanged(_ playing: Bool) {
     isPlaying = playing
+    KeepAwake.shared.playbackChanged(playing: playing)
     if playing { lastTick = Date() }
     currentTime = engine.currentTime
     NowPlaying.shared.update(full: false)
@@ -662,6 +687,7 @@ final class PlayerModel {
     await closeCurrent()
     item = nil
     queue = []
+    MiniPlayer.shared.hide()
     timeline = Timeline(tracks: [], chapters: [])
     NowPlaying.shared.clear()
   }

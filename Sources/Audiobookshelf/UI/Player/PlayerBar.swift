@@ -1,232 +1,278 @@
 import ABSCore
 import SwiftUI
 
-/// The web player (components/app/MediaPlayerContainer.vue + player/PlayerUi.vue):
-/// 160 px, primary background, cover top-left, title/author/duration, a close
-/// button, centred transport, right-hand cluster, track bar, time row.
+/// The player: one quiet row of controls over a thin progress line.
+///
+/// Deliberately not the web's PlayerUi.vue any more. That bar is 160 px with
+/// eleven icons, a person and a clock glyph, "/ 0%", and a tick for every file
+/// (481 on a CD rip). Here the row keeps what is used every minute: transport,
+/// speed, sleep, keep awake, chapters. Everything else lives in the ••• menu.
 struct PlayerBar: View {
   @Bindable var player = PlayerModel.shared
-  @Bindable var settings = AppSettings.shared
   var app = AppModel.shared
 
   var body: some View {
-    ZStack(alignment: .topLeading) {
-      VStack(spacing: 0) {
-        header
-        controlsRow
-          .padding(.top, -24)
-        TrackBar()
-          .padding(.top, 4)
-        timeRow
-          .padding(.top, 2)
+    VStack(spacing: 6) {
+      ZStack {
+        HStack(spacing: 12) {
+          nowPlaying
+          Spacer(minLength: 16)
+          PlayerActions()
+        }
+        TransportControls()
       }
-      .padding(.horizontal, 16)
-      .padding(.top, 8)
-      .padding(.bottom, 16)
-
-      cover
-        .padding(.leading, 16)
-        .padding(.top, 8)
+      .frame(height: 52)
+      ProgressRow()
     }
+    .padding(.horizontal, 18)
+    .padding(.top, 10)
+    .padding(.bottom, 10)
     .frame(height: Theme.playerHeight)
     .frame(maxWidth: .infinity)
     .background(Theme.primary)
+    .overlay(alignment: .top) { Color.white.opacity(0.06).frame(height: 1) }
   }
 
   private var aspect: Double { app.currentLibrary?.coverAspect ?? 1 }
-  private var coverWidth: CGFloat { 77 / aspect }
 
-  private var cover: some View {
-    BookCover(item: player.item, width: coverWidth, aspect: aspect, pixelWidth: 200)
-      .onTapGesture { if let id = player.item?.id { app.go(.item(id)) } }
-      .linkCursor()
-  }
-
-  private var header: some View {
-    HStack(alignment: .top) {
-      VStack(alignment: .leading, spacing: 0) {
+  private var nowPlaying: some View {
+    HStack(spacing: 12) {
+      BookCover(item: player.item, width: 48 / aspect, aspect: aspect, pixelWidth: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .onTapGesture { if let id = player.item?.id { app.go(.item(id)) } }
+        .linkCursor()
+      VStack(alignment: .leading, spacing: 2) {
         Text(player.displayTitle.isEmpty ? "No Title" : player.displayTitle)
-          .font(Theme.sans(18))
+          .font(.system(size: 13, weight: .semibold))
           .foregroundStyle(.white)
-          .lineLimit(1)
           .onTapGesture { if let id = player.item?.id { app.go(.item(id)) } }
           .linkCursor()
-        HStack(spacing: 6) {
-          Icon("person", size: 14)
-          authorLinks
-        }
-        .foregroundStyle(Theme.gray400)
-        .frame(maxWidth: 520, alignment: .leading)
-        HStack(spacing: 6) {
-          Icon("schedule", size: 12)
-          Text(Format.timestamp(player.duration / player.rate))
-            .font(Theme.mono(14))
-        }
-        .foregroundStyle(Theme.gray400)
+        Text(byline)
+          .font(.system(size: 12))
+          .foregroundStyle(Theme.gray400)
+        ChapterLine()
       }
-      .padding(.leading, aspect == 1 ? 96 : 64)
-      Spacer(minLength: 0)
-      HoverIcon(icon: "close", size: 24, color: .white) { Task { await player.close() } }
-        .help(L.s("LabelClosePlayer"))
-        .padding(16)
+      .lineLimit(1)
+      .frame(maxWidth: 300, alignment: .leading)
     }
   }
 
-  @ViewBuilder private var authorLinks: some View {
-    let authors = player.item?.media.metadata.authors ?? []
-    if authors.isEmpty {
-      Text(player.displayAuthor.isEmpty ? "Unknown" : player.displayAuthor).font(Theme.sans(16))
-        .lineLimit(1)
-    } else {
-      HStack(spacing: 0) {
-        ForEach(Array(authors.enumerated()), id: \.offset) { i, a in
-          Text(a.name + (i < authors.count - 1 ? ", " : ""))
-            .font(Theme.sans(16))
-            .lineLimit(1)
-            .onTapGesture { app.go(.author(a.id)) }
-            .linkCursor()
+  /// "Bryce Courtenay · read by Humphrey Bower".
+  private var byline: String {
+    let author = player.displayAuthor.isEmpty ? "Unknown" : player.displayAuthor
+    let narrators = player.item?.media.metadata.narrators ?? []
+    let reader = narrators.filter { $0 != author }.joined(separator: ", ")
+    return reader.isEmpty ? author : "\(author) · read by \(reader)"
+  }
+}
+
+/// SF Symbol button with a soft circular hover, the native equivalent of the
+/// web's icon font buttons.
+struct SymbolButton: View {
+  let symbol: String
+  var size: CGFloat = 15
+  var weight: Font.Weight = .medium
+  var active = false
+  var disabled = false
+  let help: String
+  let action: () -> Void
+  @State private var hover = false
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: symbol)
+        .font(.system(size: size, weight: weight))
+        .foregroundStyle(
+          disabled ? Theme.gray600 : active ? Theme.accent : hover ? .white : Theme.gray300
+        )
+        .frame(width: size + 16, height: size + 16)
+        .background(Circle().fill(Color.white.opacity(hover && !disabled ? 0.08 : 0)))
+        .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+    .disabled(disabled)
+    .help(help)
+    .accessibilityLabel(help)
+    .onHover { hover = $0 }
+    .animation(.easeOut(duration: 0.12), value: hover)
+  }
+}
+
+/// Centered transport: chapter back, jump back, play/pause, jump forward, next.
+struct TransportControls: View {
+  @Bindable var player = PlayerModel.shared
+  var settings = AppSettings.shared
+
+  var body: some View {
+    HStack(spacing: 14) {
+      SymbolButton(symbol: "backward.end.fill", size: 12, help: L.s("ButtonPreviousChapter")) {
+        player.previousChapter()
+      }
+      SymbolButton(
+        symbol: Self.jumpSymbol("gobackward", settings.jumpBackwardAmount), size: 18,
+        help: "\(L.s("ButtonJumpBackward")) - \(Format.jumpAmount(settings.jumpBackwardAmount))"
+      ) { player.jumpBackward() }
+      playButton
+      SymbolButton(
+        symbol: Self.jumpSymbol("goforward", settings.jumpForwardAmount), size: 18,
+        help: "\(L.s("ButtonJumpForward")) - \(Format.jumpAmount(settings.jumpForwardAmount))"
+      ) { player.jumpForward() }
+      SymbolButton(
+        symbol: "forward.end.fill", size: 12, disabled: !player.hasNext,
+        help: player.nextIsQueueItem ? L.s("ButtonNextItemInQueue") : L.s("ButtonNextChapter")
+      ) { player.next() }
+    }
+  }
+
+  private var playButton: some View {
+    Button {
+      player.playPause()
+    } label: {
+      ZStack {
+        Circle().fill(.white)
+        if player.isLoading {
+          ProgressView().controlSize(.small).tint(Theme.primary)
+        } else {
+          Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(Theme.primary)
+            .offset(x: player.isPlaying ? 0 : 1.5)
         }
       }
+      .frame(width: 40, height: 40)
+      .contentShape(Circle())
     }
+    .buttonStyle(PressScale())
+    .accessibilityLabel(player.isPlaying ? L.s("ButtonPause") : L.s("ButtonPlay"))
   }
 
-  private var controlsRow: some View {
-    ZStack {
-      TransportControls()
-      HStack(spacing: 0) {
-        Spacer()
-        rightCluster
-      }
-    }
+  /// SF Symbols only ship numbered jump glyphs for these amounts.
+  static func jumpSymbol(_ base: String, _ seconds: Double) -> String {
+    let n = Int(seconds)
+    return [5, 10, 15, 30, 45, 60, 75, 90].contains(n) ? "\(base).\(n)" : base
   }
+}
 
-  private var rightCluster: some View {
-    HStack(spacing: 16) {
+struct PressScale: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.92 : 1)
+      .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+  }
+}
+
+/// Right cluster: speed, sleep, keep awake, chapters, and a ••• menu.
+struct PlayerActions: View {
+  @Bindable var player = PlayerModel.shared
+  var awake = KeepAwake.shared
+
+  var body: some View {
+    HStack(spacing: 4) {
       SpeedControl()
-      VolumeControl()
-        .help(L.s("LabelVolume"))
-      Button {
-        player.showSleepTimer = true
-      } label: {
-        HStack(spacing: 2) {
-          Icon("snooze", size: 24)
-            .foregroundStyle(player.sleep.isSet ? Theme.warning : Theme.gray300)
-          if player.sleep.isSet {
-            Text(
-              Format.sleepBadge(
-                remaining: player.sleepRemaining, isEndOfChapter: player.sleep.mode == .endOfChapter
-              )
-            )
-            .font(Theme.sans(18, .semibold))
-            .foregroundStyle(Theme.warning)
-            .frame(minWidth: 32)
-          }
+      sleepButton
+      SymbolButton(
+        symbol: awake.enabled ? "cup.and.heat.waves.fill" : "cup.and.heat.waves",
+        active: awake.enabled,
+        help: awake.enabled
+          ? "Keeping the Mac awake while playing\(awake.lidSupported ? ", lid closed too" : "")"
+          : "Keep the Mac awake while playing"
+      ) { awake.toggle() }
+      if !player.chapters.isEmpty {
+        SymbolButton(symbol: "list.bullet", help: L.s("LabelViewChapters") + " (L)") {
+          player.showChapters.toggle()
         }
       }
-      .buttonStyle(.plain)
-      .help(L.s("LabelSleepTimer"))
-      HoverIcon(icon: player.bookmarks.isEmpty ? "bookmark_border" : "bookmarks") {
+      MoreMenu()
+    }
+  }
+
+  private var sleepButton: some View {
+    Button {
+      player.showSleepTimer = true
+    } label: {
+      HStack(spacing: 3) {
+        Image(systemName: player.sleep.isSet ? "moon.zzz.fill" : "moon.zzz")
+          .font(.system(size: 15, weight: .medium))
+        if player.sleep.isSet {
+          Text(
+            Format.sleepBadge(
+              remaining: player.sleepRemaining, isEndOfChapter: player.sleep.mode == .endOfChapter)
+          )
+          .font(.system(size: 12, weight: .semibold).monospacedDigit())
+        }
+      }
+      .foregroundStyle(player.sleep.isSet ? Theme.warning : Theme.gray300)
+      .padding(.horizontal, 8)
+      .frame(height: 31)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help(L.s("LabelSleepTimer"))
+  }
+}
+
+/// Everything that is not needed every minute.
+struct MoreMenu: View {
+  @Bindable var player = PlayerModel.shared
+
+  var body: some View {
+    Menu {
+      Button(player.bookmarks.isEmpty ? "Bookmarks" : "Bookmarks (\(player.bookmarks.count))") {
         player.showBookmarks = true
       }
-      .help(L.s("LabelViewBookmarks"))
-      if !player.chapters.isEmpty {
-        HoverIcon(icon: "format_list_bulleted") { player.showChapters.toggle() }
-          .help(L.s("LabelViewChapters"))
-      }
       if !player.queue.isEmpty {
-        HoverIcon(icon: "playlist_play") { player.showQueue = true }
-          .help(L.s("LabelViewQueue"))
+        Button("Queue (\(player.queue.count))") { player.showQueue = true }
       }
-      HoverIcon(icon: "settings_slow_motion", size: 27) { player.showPlayerSettings.toggle() }
-        .help(L.s("LabelViewPlayerSettings"))
+      Divider()
+      Button(player.volume > 0 ? "Mute" : "Unmute") { player.toggleMute() }
+      Button("Mini Player  ⌘⇧M") { MiniPlayer.shared.toggle() }
+      Button(L.s("HeaderPlayerSettings")) { player.showPlayerSettings = true }
+      Divider()
+      Button(L.s("LabelClosePlayer")) { Task { await player.close() } }
+    } label: {
+      Image(systemName: "ellipsis")
+        .font(.system(size: 15, weight: .medium))
+        .foregroundStyle(Theme.gray300)
+        .frame(width: 31, height: 31)
+        .contentShape(Rectangle())
     }
-    .padding(.trailing, 8)
+    .menuStyle(.button)
+    .buttonStyle(.plain)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .help("More")
   }
+}
 
-  private var timeRow: some View {
+/// Elapsed · progress line · remaining.
+struct ProgressRow: View {
+  var player = PlayerModel.shared
+  var settings = AppSettings.shared
+
+  var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { _ in
       let t = player.liveTime
       let chapter = player.timeline.chapter(at: t)
       let chapterMode = settings.useChapterTrack && chapter != nil
       let shown = chapterMode ? max(0, t - (chapter?.start ?? 0)) : t
       let span = chapterMode ? ((chapter?.end ?? 0) - (chapter?.start ?? 0)) : player.duration
-      let percent = span > 0 ? Int((100 * shown / span).rounded()) : 0
-      let remaining = (span - shown) / player.rate
-      ZStack {
-        HStack(spacing: 0) {
-          Text(Format.timestamp(shown / player.rate)).font(Theme.mono(14)).foregroundStyle(
-            Theme.gray100)
-          Text(" / \(percent)%").font(Theme.mono(14)).foregroundStyle(Theme.gray100)
-          Spacer()
-          Text(remaining < 0 ? Format.timestamp(-remaining) : "-" + Format.timestamp(remaining))
-            .font(Theme.mono(14)).foregroundStyle(Theme.gray100)
-        }
-        HStack(spacing: 0) {
-          Text(chapter?.title ?? "").font(Theme.sans(14)).foregroundStyle(Theme.gray300)
-          if chapterMode, let idx = player.timeline.chapterIndex(at: t) {
-            Text(
-              "  ("
-                + L.s(
-                  "LabelPlayerChapterNumberMarker", String(idx + 1), String(player.chapters.count))
-                + ")"
-            )
-            .font(Theme.sans(12)).foregroundStyle(Theme.gray400)
-          }
-        }
-        .lineLimit(1)
-        .padding(.horizontal, 160)
+      let remaining = max(0, span - shown) / player.rate
+      HStack(spacing: 10) {
+        Text(Format.timestamp(shown / player.rate))
+          .frame(width: 64, alignment: .leading)
+        TrackBar()
+        Text("-" + Format.timestamp(remaining))
+          .frame(width: 64, alignment: .trailing)
       }
+      .font(.system(size: 11, weight: .medium).monospacedDigit())
+      .foregroundStyle(Theme.gray400)
     }
   }
 }
 
-/// Centered transport (player/PlayerPlaybackControls.vue).
-struct TransportControls: View {
-  @Bindable var player = PlayerModel.shared
-  var settings = AppSettings.shared
-
-  var body: some View {
-    HStack(spacing: 0) {
-      if player.isLoading {
-        Icon("autorenew", size: 24)
-          .foregroundStyle(Theme.primary)
-          .padding(8)
-          .background(Circle().fill(Theme.accent))
-          .rotationEffect(.degrees(player.isLoading ? 360 : 0))
-          .animation(
-            .linear(duration: 1).repeatForever(autoreverses: false), value: player.isLoading)
-      } else {
-        HoverIcon(icon: "first_page", size: 30) { player.previousChapter() }
-          .help(L.s("ButtonPreviousChapter"))
-          .padding(.trailing, 32)
-        HoverIcon(icon: "replay", size: 30) { player.jumpBackward() }
-          .help("\(L.s("ButtonJumpBackward")) - \(Format.jumpAmount(settings.jumpBackwardAmount))")
-        Button {
-          player.playPause()
-        } label: {
-          Icon(player.isPlaying ? "pause" : "play_arrow", size: 24, filled: true)
-            .foregroundStyle(Theme.primary)
-            .padding(8)
-            .background(Circle().fill(Theme.accent))
-            .shadow(color: .black.opacity(0.2), radius: 1)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(player.isPlaying ? L.s("ButtonPause") : L.s("ButtonPlay"))
-        .padding(.horizontal, 32)
-        HoverIcon(icon: "forward_media", size: 30) { player.jumpForward() }
-          .help("\(L.s("ButtonJumpForward")) - \(Format.jumpAmount(settings.jumpForwardAmount))")
-        HoverIcon(icon: "last_page", size: 30, disabled: !player.hasNext) { player.next() }
-          .help(player.nextIsQueueItem ? L.s("ButtonNextItemInQueue") : L.s("ButtonNextChapter"))
-          .padding(.leading, 32)
-      }
-    }
-    .frame(height: 44)
-    .padding(.bottom, 8)
-  }
-}
-
-/// 8 px track (player/PlayerTrackBar.vue): ready/buffer/played layers,
-/// chapter ticks below, hover cursor with a timestamp pill, click to seek.
+/// A 4 pt capsule that thickens under the pointer. Chapter marks are drawn
+/// only when they are far enough apart to mean something: a tick per file on
+/// a 481-file CD rip was a comb, not information.
 struct TrackBar: View {
   var player = PlayerModel.shared
   var settings = AppSettings.shared
@@ -241,163 +287,169 @@ struct TrackBar: View {
         let played = CGFloat(max(0, min(1, (t - span.base) / span.length)))
         let buffered = CGFloat(
           max(0, min(1, (player.engine.bufferedUntil - span.base) / span.length)))
-        VStack(spacing: 0) {
-          ZStack(alignment: .leading) {
-            Rectangle().fill(Theme.gray700)
-            Rectangle().fill(Theme.gray500).frame(width: w * buffered)
-            Rectangle().fill(Theme.gray200).frame(width: w * played)
-            if let hoverX {
-              Rectangle().fill(Theme.gray100).frame(width: 2).offset(x: hoverX - 1)
-            }
+        let thick: CGFloat = hoverX == nil ? 4 : 6
+        ZStack(alignment: .leading) {
+          Capsule().fill(Color.white.opacity(0.12))
+          Capsule().fill(Color.white.opacity(0.18)).frame(width: w * buffered)
+          Capsule().fill(Color.white.opacity(0.9)).frame(width: max(thick, w * played))
+          ticks(width: w)
+          if hoverX != nil {
+            Circle().fill(.white).frame(width: 11, height: 11)
+              .offset(x: w * played - 5.5)
+              .shadow(color: .black.opacity(0.3), radius: 2)
           }
-          .frame(height: 8)
-          .scaleEffect(y: hoverX == nil ? 1 : 1.25)
-          .clipped()
-          .contentShape(Rectangle())
-          .onContinuousHover { phase in
-            switch phase {
-            case .active(let p): hoverX = p.x
-            case .ended: hoverX = nil
-            }
+        }
+        .frame(height: thick)
+        .frame(maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onContinuousHover { phase in
+          switch phase {
+          case .active(let p): hoverX = p.x
+          case .ended: hoverX = nil
           }
-          .onTapGesture { location in
-            let frac = max(0, min(1, location.x / max(1, w)))
+        }
+        .gesture(
+          DragGesture(minimumDistance: 0).onEnded { v in
+            let frac = max(0, min(1, v.location.x / max(1, w)))
             player.seek(to: span.base + Double(frac) * span.length)
           }
-          ZStack(alignment: .leading) {
-            if !settings.useChapterTrack, player.duration > 0 {
-              ForEach(player.chapters.dropFirst()) { c in
-                Rectangle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 4)
-                  .offset(x: w * CGFloat(c.start / player.duration))
-              }
-            }
-          }
-          .frame(height: 8, alignment: .top)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .overlay(alignment: .topLeading) {
-          if let hoverX {
-            let time = span.base + Double(max(0, min(1, hoverX / max(1, w)))) * span.length
-            let chapter = player.timeline.chapter(at: time)
-            let label =
-              Format.timestamp((time - (settings.useChapterTrack ? span.base : 0)) / player.rate)
-              + (chapter.map { " - \($0.title)" } ?? "")
-            Text(label)
-              .font(Theme.mono(13))
-              .foregroundStyle(.black)
-              .padding(.horizontal, 6)
-              .padding(.vertical, 2)
-              .background(RoundedRectangle(cornerRadius: 3).fill(.white))
-              .fixedSize()
-              .offset(x: min(max(0, hoverX - 40), w - 160), y: -26)
-              .allowsHitTesting(false)
-          }
-        }
+        )
+        .overlay(alignment: .topLeading) { hoverLabel(width: w, span: span) }
+        .animation(.easeOut(duration: 0.12), value: hoverX == nil)
       }
     }
-    .frame(height: 16)
+    .frame(height: 14)
+  }
+
+  @ViewBuilder private func ticks(width w: CGFloat) -> some View {
+    let marks = player.chapters.dropFirst()
+    if !settings.useChapterTrack, player.duration > 0, !marks.isEmpty,
+      w / CGFloat(marks.count + 1) >= 14
+    {
+      ForEach(Array(marks)) { c in
+        Rectangle().fill(Theme.primary.opacity(0.9)).frame(width: 1.5)
+          .offset(x: w * CGFloat(c.start / player.duration))
+      }
+    }
+  }
+
+  @ViewBuilder private func hoverLabel(width w: CGFloat, span: (base: Double, length: Double)) -> some View {
+    if let hoverX {
+      let time = span.base + Double(max(0, min(1, hoverX / max(1, w)))) * span.length
+      let chapter = player.timeline.chapter(at: time)
+      let label =
+        Format.timestamp((time - (settings.useChapterTrack ? span.base : 0)) / player.rate)
+        + (chapter.map { player.chapters.count > 1 ? "  \($0.title)" : "" } ?? "")
+      Text(label)
+        .font(.system(size: 11, weight: .medium).monospacedDigit())
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(Color.black.opacity(0.85)))
+        .fixedSize()
+        .offset(x: min(max(0, hoverX - 30), w - 150), y: -26)
+        .allowsHitTesting(false)
+    }
   }
 }
 
-/// `controls/PlaybackSpeedControl.vue`: "1.0x" opens a popover with presets
-/// and −/+; changes apply live and are saved when the popover closes.
+/// "1.5x" opens presets and a fine −/+ stepper. Keys: S 2x, A 1.5x, X 1.2x, Z 1x.
 struct SpeedControl: View {
   @Bindable var player = PlayerModel.shared
   var settings = AppSettings.shared
   @State private var show = false
-  @State private var openedAt: Double = 1
-  static let rates: [Double] = [0.5, 1, 1.2, 1.5, 2]
+  @State private var hover = false
+  static let rates: [Double] = [1, 1.2, 1.5, 1.75, 2]
 
   var body: some View {
     Button {
-      openedAt = player.rate
       show = true
     } label: {
-      (Text(Self.display(player.rate, step: settings.playbackRateIncrementDecrement)).font(
-        Theme.sans(16))
-        + Text("x").font(Theme.sans(16)))
-        .foregroundStyle(Theme.gray200)
+      Text(Format.rate(player.rate))
+        .font(.system(size: 12, weight: .semibold).monospacedDigit())
+        .foregroundStyle(
+          abs(player.rate - 1) < 0.001 ? (hover ? .white : Theme.gray300) : Theme.accent
+        )
+        .padding(.horizontal, 8)
+        .frame(minWidth: 44)
+        .frame(height: 24)
+        .background(Capsule().stroke(Color.white.opacity(hover ? 0.3 : 0.15)))
+        .contentShape(Capsule())
     }
     .buttonStyle(.plain)
+    .onHover { hover = $0 }
+    .help("Playback speed  (S 2x · A 1.5x · X 1.2x · Z 1x)")
     .popover(isPresented: $show, arrowEdge: .top) {
-      VStack(spacing: 0) {
-        HStack(spacing: 0) {
+      VStack(spacing: 10) {
+        HStack(spacing: 4) {
           ForEach(Self.rates, id: \.self) { r in
+            let on = abs(player.rate - r) < 0.001
             Button {
-              player.setRate(r, persist: false)
+              player.setRate(r)
             } label: {
-              (Text(Format.trimNumber(r)).font(Theme.sans(12)) + Text("x").font(Theme.sans(14)))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 36)
-                .background(abs(player.rate - r) < 0.001 ? Theme.black100 : Color.clear)
-                .overlay(Rectangle().stroke(Theme.black300, lineWidth: 1))
+              Text(Format.rate(r))
+                .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                .foregroundStyle(on ? Theme.primary : .white)
+                .frame(width: 44, height: 26)
+                .background(
+                  RoundedRectangle(cornerRadius: 6).fill(on ? .white : Color.white.opacity(0.08)))
             }
             .buttonStyle(.plain)
           }
         }
-        .frame(width: 220, height: 36)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        HStack(spacing: 0) {
-          IconButton(
-            icon: "remove",
-            disabled: player.rate - settings.playbackRateIncrementDecrement < 0.5 - 0.0001
-          ) {
-            player.setRate(player.rate - settings.playbackRateIncrementDecrement, persist: false)
+        HStack {
+          SymbolButton(symbol: "minus", size: 12, help: "Slower") {
+            player.setRate(player.rate - settings.playbackRateIncrementDecrement)
           }
           Spacer()
-          (Text(Self.display(player.rate, step: settings.playbackRateIncrementDecrement)).font(
-            Theme.sans(30))
-            + Text("x").font(Theme.sans(24)))
+          Text(Format.rate(player.rate))
+            .font(.system(size: 22, weight: .semibold).monospacedDigit())
             .foregroundStyle(.white)
           Spacer()
-          IconButton(
-            icon: "add",
-            disabled: player.rate + settings.playbackRateIncrementDecrement > 10 + 0.0001
-          ) {
-            player.setRate(player.rate + settings.playbackRateIncrementDecrement, persist: false)
+          SymbolButton(symbol: "plus", size: 12, help: "Faster") {
+            player.setRate(player.rate + settings.playbackRateIncrementDecrement)
           }
         }
-        .padding(.top, 8)
-        .frame(width: 220)
       }
-      .padding(8)
-      .background(Theme.bg)
+      .padding(12)
+      .frame(width: 252)
       .environment(\.colorScheme, .dark)
-      .onDisappear {
-        if abs(player.rate - openedAt) > 0.0001 { player.setRate(player.rate, persist: true) }
-      }
     }
-  }
-
-  /// "1.0" with a 0.1 step unless the value has two decimals; always two with 0.05.
-  static func display(_ r: Double, step: Double) -> String {
-    let twoDecimals = abs((r * 100).rounded() - (r * 10).rounded() * 10) > 0.001
-    if abs(step - 0.05) < 0.0001 || twoDecimals { return String(format: "%.2f", r) }
-    return String(format: "%.1f", r)
   }
 }
 
-/// `controls/VolumeControl.vue`: icon toggles mute; hover shows a vertical
-/// slider; the scroll wheel changes volume by 0.1.
-struct VolumeControl: View {
-  @Bindable var player = PlayerModel.shared
-  @State private var show = false
-
-  var icon: String {
-    player.volume <= 0 ? "volume_mute" : (player.volume <= 0.5 ? "volume_down" : "volume_up")
-  }
+/// The big "2x" that flashes when a speed key is pressed.
+struct SpeedFlash: View {
+  var player = PlayerModel.shared
 
   var body: some View {
-    HoverIcon(icon: icon) { player.toggleMute() }
-      .onHover { inside in if inside { show = true } }
-      .popover(isPresented: $show, arrowEdge: .top) {
-        Slider(value: Binding(get: { player.volume }, set: { player.setVolume($0) }), in: 0...1)
-          .frame(width: 110)
-          .rotationEffect(.degrees(-90))
-          .frame(width: 32, height: 120)
-          .padding(8)
-          .background(Theme.bg)
-          .environment(\.colorScheme, .dark)
+    if let flash = player.speedFlash {
+      Text(Format.rate(flash.rate))
+        .font(.system(size: 30, weight: .semibold).monospacedDigit())
+        .foregroundStyle(.white)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .environment(\.colorScheme, .dark)
+        .id(flash.id)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .allowsHitTesting(false)
+    }
+  }
+}
+
+/// The current chapter, under the author. It used to float over the progress
+/// line, where it crowded the play button.
+struct ChapterLine: View {
+  var player = PlayerModel.shared
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { _ in
+      if player.chapters.count > 1, let c = player.timeline.chapter(at: player.liveTime) {
+        Text(c.title)
+          .font(.system(size: 11))
+          .foregroundStyle(Theme.gray500)
       }
+    }
   }
 }

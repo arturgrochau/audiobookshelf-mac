@@ -63,7 +63,6 @@ struct HomePage: View {
     }
     .scrollIndicators(.automatic)
     .restoresScroll(.home)
-    .overlay(alignment: .bottomTrailing) { CoverSizeWidget().padding(16) }
   }
 
   private func shelfTitle(_ s: Shelf) -> String {
@@ -138,7 +137,8 @@ struct ItemSlider<Content: View>: View {
   private func chevron(_ icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
     let em = metrics.em
     return Button(action: action) {
-      Icon(icon, size: 1.5 * em)
+      Image(systemName: icon == "chevron_left" ? "chevron.left" : "chevron.right")
+        .font(.system(size: 0.8 * em, weight: .semibold))
         .foregroundStyle(enabled ? Theme.gray300 : Color.white.opacity(0.4))
         .frame(width: 2 * em, height: 2 * em)
         .contentShape(Circle())
@@ -147,28 +147,6 @@ struct ItemSlider<Content: View>: View {
     .disabled(!enabled)
     .background(Circle().fill(Color.clear)).hoverHighlight(.white.opacity(0.05)).clipShape(Circle())
     .padding(.horizontal, 0.25 * em)
-  }
-}
-
-/// widgets/CoverSizeWidget.vue: − / + in the bottom-right corner, 60…220 by 20.
-struct CoverSizeWidget: View {
-  var settings = AppSettings.shared
-
-  var body: some View {
-    HStack(spacing: 4) {
-      HoverIcon(icon: "remove", size: 20) { step(-1) }
-      HoverIcon(icon: "add", size: 20) { step(1) }
-    }
-    .padding(.horizontal, 6)
-    .padding(.vertical, 2)
-    .background(Theme.bg.opacity(0.9))
-    .clipShape(RoundedRectangle(cornerRadius: 999))
-    .overlay(RoundedRectangle(cornerRadius: 999).stroke(Color.white.opacity(0.1)))
-  }
-
-  func step(_ d: Double) {
-    let v = settings.bookshelfCoverSize + 20 * d
-    settings.bookshelfCoverSize = min(220, max(60, v))
   }
 }
 
@@ -209,7 +187,6 @@ struct LibraryGridPage: View {
         .padding(.vertical, 2 * em)
       }
       .restoresScroll(filter.map { Route.filtered($0) } ?? .library)
-      .overlay(alignment: .bottomTrailing) { CoverSizeWidget().padding(16) }
     }
   }
 
@@ -269,7 +246,7 @@ struct LibraryToolbar: View {
         } label: {
           HStack(spacing: 4) {
             Text(Self.describe(filter)).lineLimit(1)
-            Icon("close", size: 14)
+            Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
           }
           .font(Theme.sans(13))
           .padding(.horizontal, 8)
@@ -349,7 +326,6 @@ struct SeriesListPage: View {
     }
     .restoresScroll(.series)
     .task { if store.series.isEmpty { await store.refreshSeries() } }
-    .overlay(alignment: .bottomTrailing) { CoverSizeWidget().padding(16) }
   }
 }
 
@@ -402,9 +378,12 @@ struct AuthorPage: View {
             ZStack {
               Theme.primary
               if let url = app.authorImageURL(author) {
-                RemoteImage(url: url, pixelWidth: 400) { Icon("person", size: 120, filled: true) }
+                RemoteImage(url: url, pixelWidth: 400) {
+                  Image(systemName: "person.fill").font(.system(size: 80))
+                }
               } else {
-                Icon("person", size: 120, filled: true).foregroundStyle(.white.opacity(0.6))
+                Image(systemName: "person.fill").font(.system(size: 80))
+                  .foregroundStyle(.white.opacity(0.6))
               }
             }
             .frame(width: 192, height: 240)

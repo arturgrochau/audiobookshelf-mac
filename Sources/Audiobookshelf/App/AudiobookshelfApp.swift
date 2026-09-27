@@ -95,6 +95,12 @@ struct AppCommands: Commands {
         .disabled(!player.hasItem)
       Button(L.s("HeaderChapters")) { player.showChapters = true }
         .disabled(!player.hasItem)
+      Button("Mini Player") { MiniPlayer.shared.toggle() }
+        .keyboardShortcut("m", modifiers: [.command, .shift])
+        .disabled(!player.hasItem)
+      Button(KeepAwake.shared.enabled ? "Let the Mac Sleep" : "Keep the Mac Awake While Playing") {
+        KeepAwake.shared.toggle()
+      }
     }
   }
 }

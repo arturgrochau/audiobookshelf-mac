@@ -26,7 +26,8 @@ struct GroupCard: View {
         }
         .frame(width: w, alignment: .leading)
         if books.isEmpty {
-          Icon("collections_bookmark", size: 3 * em).foregroundStyle(Theme.gray500)
+          Image(systemName: "square.grid.2x2").font(.system(size: 2 * em, weight: .light))
+            .foregroundStyle(Theme.gray500)
         }
         if hover {
           Color.black.opacity(0.4)
@@ -152,14 +153,8 @@ struct GroupDetailPage: View {
           Text(detail).font(Theme.sans(16)).foregroundStyle(Theme.gray200)
         }
         if books.contains(where: \.media.hasAudio) {
-          WebButton(color: Theme.success, small: true, paddingX: 16) {
+          PillButton(title: L.s("ButtonPlay"), symbol: "play.fill", prominent: true) {
             playAll()
-          } label: {
-            HStack(spacing: 4) {
-              Icon("play_arrow", size: 24, filled: true).padding(.leading, -8)
-              Text(L.s("ButtonPlay"))
-            }
-            .frame(height: 28)
           }
         }
         if loaded && books.isEmpty {
@@ -348,9 +343,9 @@ struct StatsPage: View {
         Text(L.s("HeaderYourStats")).font(Theme.sans(30, .semibold))
         if let s = stats {
           HStack(spacing: 48) {
-            total(Double(finishedCount), L.s("LabelStatsItemsFinished"), "local_library")
-            total(Double(s.days.count), L.s("LabelStatsDaysListened"), "event")
-            total((s.totalTime / 60).rounded(), L.s("LabelStatsMinutesListening"), "watch_later")
+            total(Double(finishedCount), L.s("LabelStatsItemsFinished"), "books.vertical")
+            total(Double(s.days.count), L.s("LabelStatsDaysListened"), "calendar")
+            total((s.totalTime / 60).rounded(), L.s("LabelStatsMinutesListening"), "clock")
           }
           Text(L.s("HeaderStatsMinutesListeningChart")).font(Theme.sans(18, .semibold))
             .padding(.top, 8)
@@ -385,7 +380,8 @@ struct StatsPage: View {
 
   private func total(_ n: Double, _ label: String, _ icon: String) -> some View {
     HStack(spacing: 12) {
-      Icon(icon, size: 40).foregroundStyle(Theme.gray400)
+      Image(systemName: icon).font(.system(size: 26, weight: .light))
+        .foregroundStyle(Theme.gray400).frame(width: 36)
       VStack(alignment: .leading, spacing: 0) {
         Text(String(Int(n))).font(Theme.sans(36, .semibold))
         Text(label).font(Theme.sans(14)).foregroundStyle(Theme.gray300)

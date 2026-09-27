@@ -115,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   // MARK: Quit
 
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    KeepAwake.shared.releaseForQuit()
     guard PlayerModel.shared.hasItem else { return .terminateNow }
     Task {
       await withTaskGroup(of: Void.self) { g in
@@ -173,6 +174,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       return false
     }
     guard p.hasItem, !modalOpen else { return false }
+    // Speed letters follow the layout (a physical key code would be A=Q on AZERTY).
+    if mods.isEmpty, !e.isARepeat,
+      let r = ["s": 2, "a": 1.5, "x": 1.2, "z": 1][
+        e.charactersIgnoringModifiers?.lowercased() ?? ""]
+    {
+      p.toggleRate(r)
+      return true
+    }
     switch (e.keyCode, mods) {
     case (49, []) where !e.isARepeat: p.playPause()  // Space
     case (124, [.option]): p.jumpForward()
@@ -267,6 +276,12 @@ enum URLRoutes {
         case "bookmarks": p.showBookmarks = true
         case "queue": p.showQueue = true
         case "settings": p.showPlayerSettings = true
+        case "none":
+          p.showSleepTimer = false
+          p.showChapters = false
+          p.showBookmarks = false
+          p.showQueue = false
+          p.showPlayerSettings = false
         default: break
         }
       default: break

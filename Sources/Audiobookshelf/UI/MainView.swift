@@ -44,6 +44,7 @@ struct MainView: View {
       if player.showQueue { QueueModal() }
       if player.showPlayerSettings { PlayerSettingsModal() }
     }
+    .overlay { SpeedFlash() }
     .overlay(alignment: .bottomTrailing) {
       ToastStack(toasts: app.toasts)
         .padding(.bottom, player.hasItem ? Theme.playerHeight : 0)
@@ -55,64 +56,36 @@ struct MainView: View {
   }
 }
 
-/// components/app/Appbar.vue inside a real title bar: traffic lights on the
-/// left, then logo, wordmark, library picker, search, and the right icons.
+/// The title bar: traffic lights, history, library, search, one account menu.
+///
+/// The web's Appbar.vue put a logo, a wordmark, a boxed library picker and
+/// three icons here. A Mac window already says which app it is, so the bar
+/// keeps only what navigates.
 struct AppBar: View {
   var app = AppModel.shared
-  @State private var searchFocused = false
 
   var body: some View {
     HStack(spacing: 0) {
-      Color.clear.frame(width: 72)
+      Color.clear.frame(width: 76)
       HStack(spacing: 2) {
-        NavArrow(icon: "chevron_left", enabled: app.canGoBack) { app.goBack() }
-        NavArrow(icon: "chevron_right", enabled: app.canGoForward) { app.goForward() }
+        SymbolButton(symbol: "chevron.left", size: 13, weight: .semibold,
+                     disabled: !app.canGoBack, help: "Back") { app.goBack() }
+        SymbolButton(symbol: "chevron.right", size: 13, weight: .semibold,
+                     disabled: !app.canGoForward, help: "Forward") { app.goForward() }
       }
-      .padding(.trailing, 12)
-      Button {
-        app.go(.home)
-      } label: {
-        HStack(spacing: 12) {
-          AppLogo().frame(width: 32, height: 32)
-          Text("audiobookshelf").font(Theme.sans(20)).foregroundStyle(.white)
-        }
-      }
-      .buttonStyle(.plain)
-      .padding(.trailing, 24)
+      .padding(.trailing, 10)
       LibraryPicker()
-        .padding(.trailing, 8)
+      Spacer(minLength: 16)
       GlobalSearch()
       Spacer(minLength: 16)
-      HStack(spacing: 20) {
-        HoverIcon(icon: "equalizer", size: 24, color: .white) { app.go(.stats) }
-          .help(L.s("HeaderYourStats"))
-        if app.user?.isAdminOrUp == true {
-          HoverIcon(icon: "settings", size: 24, color: .white) { openWebSettings() }
-            .help("Server settings (opens in browser)")
-        }
-        AccountButton()
-      }
-      .padding(.trailing, 24)
+      AccountButton()
+        .padding(.trailing, 14)
     }
     .frame(height: Theme.appBarHeight)
     .background(Theme.primary)
+    .overlay(alignment: .bottom) { Color.white.opacity(0.06).frame(height: 1) }
     .gesture(WindowDragGesture())
     .allowsWindowActivationEvents(true)
-  }
-
-  private func openWebSettings() {
-    if let u = app.webURL?.appendingPathComponent("config") { NSWorkspace.shared.open(u) }
-  }
-}
-
-struct NavArrow: View {
-  let icon: String
-  let enabled: Bool
-  let action: () -> Void
-  var body: some View {
-    HoverIcon(
-      icon: icon, size: 24, color: enabled ? Theme.gray300 : Theme.gray600, disabled: !enabled,
-      action: action)
   }
 }
 
@@ -130,9 +103,10 @@ struct AppLogo: View {
   }
 }
 
-/// ui/LibrariesDropdown.vue.
+/// ui/LibrariesDropdown.vue as a plain title-bar menu: "Audiobooks ⌄".
 struct LibraryPicker: View {
   var app = AppModel.shared
+  @State private var hover = false
 
   var body: some View {
     Menu {
@@ -148,60 +122,65 @@ struct LibraryPicker: View {
         }
       }
     } label: {
-      HStack(spacing: 6) {
-        Icon(libraryIcon(app.currentLibrary), size: 16)
-        Text(app.currentLibrary?.name ?? "").font(Theme.sans(14)).lineLimit(1)
+      HStack(spacing: 5) {
+        Text(app.currentLibrary?.name ?? "").font(.system(size: 13, weight: .semibold))
+          .lineLimit(1)
+        Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
+          .foregroundStyle(Theme.gray400)
       }
-      .foregroundStyle(Theme.gray400)
-      .padding(.horizontal, 10)
-      .frame(minWidth: 128, maxWidth: 208, minHeight: 32, maxHeight: 32, alignment: .leading)
-      .background(Color.black.opacity(0.2))
-      .clipShape(RoundedRectangle(cornerRadius: 4))
-      .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1)))
+      .foregroundStyle(hover ? .white : Theme.gray200)
+      .padding(.horizontal, 9)
+      .frame(height: 28)
+      .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(hover ? 0.08 : 0)))
+      .contentShape(Rectangle())
     }
     .menuStyle(.button)
     .buttonStyle(.plain)
     .menuIndicator(.hidden)
     .fixedSize()
-  }
-
-  func libraryIcon(_ lib: Library?) -> String {
-    switch lib?.icon {
-    case "podcast", "microphone-1", "microphone-3": return "podcasts"
-    case "books-1", "books-2", "book-1": return "menu_book"
-    default: return "headphones"
-    }
+    .onHover { hover = $0 }
+    .help("Switch library")
   }
 }
 
-/// Account button (w-32 × h-9): username + person icon, menu with Account / Log out.
+/// One menu for the person: stats, account, server settings, log out.
 struct AccountButton: View {
   var app = AppModel.shared
+  @State private var hover = false
+
   var body: some View {
     Menu {
+      Text(app.user?.username ?? "")
+      Divider()
+      Button("Your Stats") { app.go(.stats) }
       Button("Account") { app.go(.account) }
+      if app.user?.isAdminOrUp == true {
+        Button("Server Settings…") {
+          if let u = app.webURL?.appendingPathComponent("config") { NSWorkspace.shared.open(u) }
+        }
+      }
       Button("Open in Browser") { if let u = app.webURL { NSWorkspace.shared.open(u) } }
       Divider()
-      Button("Log out") { Task { await app.logout() } }
+      Button("Log Out") { Task { await app.logout() } }
     } label: {
-      HStack {
-        Text(app.user?.username ?? "").font(Theme.sans(14)).lineLimit(1)
-        Spacer(minLength: 4)
-        Icon("person", size: 20).foregroundStyle(Theme.gray100)
-      }
-      .foregroundStyle(.white)
-      .padding(.horizontal, 10)
-      .frame(width: 128, height: 36)
-      .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.gray500))
+      Image(systemName: "person.crop.circle")
+        .font(.system(size: 18, weight: .regular))
+        .foregroundStyle(hover ? .white : Theme.gray300)
+        .frame(width: 32, height: 32)
+        .background(Circle().fill(Color.white.opacity(hover ? 0.08 : 0)))
+        .contentShape(Circle())
     }
     .menuStyle(.button)
     .buttonStyle(.plain)
     .menuIndicator(.hidden)
     .fixedSize()
+    .onHover { hover = $0 }
+    .help(app.user?.username ?? "Account")
   }
 }
 
-/// components/app/SideRail.vue: 80 px, 80×80 entries, yellow active bar.
+/// components/app/SideRail.vue, quieter: symbols over small labels, the page
+/// you are on marked by a tinted pill instead of a yellow bar.
 struct SideRail: View {
   var app = AppModel.shared
   var downloads = DownloadManager.shared
@@ -209,55 +188,52 @@ struct SideRail: View {
   struct Entry: Identifiable {
     let id: String
     let label: String
-    let icon: String
+    let symbol: String
     let route: Route
-    var iconSize: CGFloat = 24
   }
 
   var entries: [Entry] {
     var e: [Entry] = [
-      Entry(id: "home", label: L.s("ButtonHome"), icon: "home", route: .home),
-      Entry(id: "library", label: L.s("ButtonLibrary"), icon: "import_contacts", route: .library),
-      Entry(id: "series", label: L.s("ButtonSeries"), icon: "view_column", route: .series),
+      Entry(id: "home", label: L.s("ButtonHome"), symbol: "house", route: .home),
+      Entry(id: "library", label: L.s("ButtonLibrary"), symbol: "books.vertical", route: .library),
+      Entry(id: "series", label: L.s("ButtonSeries"), symbol: "square.stack.3d.up", route: .series),
       Entry(
-        id: "collections", label: L.s("ButtonCollections"), icon: "collections_bookmark",
+        id: "collections", label: L.s("ButtonCollections"), symbol: "square.grid.2x2",
         route: .collections),
     ]
     if app.numUserPlaylists > 0 || !LibraryStore.shared.playlists.isEmpty {
       e.append(
-        Entry(
-          id: "playlists", label: L.s("ButtonPlaylists"), icon: "queue_music", route: .playlists,
-          iconSize: 27))
+        Entry(id: "playlists", label: L.s("ButtonPlaylists"), symbol: "music.note.list",
+              route: .playlists))
     }
-    e.append(Entry(id: "authors", label: L.s("ButtonAuthors"), icon: "groups", route: .authors))
+    e.append(Entry(id: "authors", label: L.s("ButtonAuthors"), symbol: "person.2", route: .authors))
     e.append(
-      Entry(
-        id: "narrators", label: L.s("LabelNarrators"), icon: "record_voice_over", route: .narrators)
-    )
+      Entry(id: "narrators", label: L.s("LabelNarrators"), symbol: "mic", route: .narrators))
     if !downloads.downloadedIds.isEmpty {
       e.append(
-        Entry(id: "downloads", label: "Downloaded", icon: "download_done", route: .downloads))
+        Entry(id: "downloads", label: "Downloaded", symbol: "arrow.down.circle",
+              route: .downloads))
     }
     return e
   }
 
   var body: some View {
-    VStack(spacing: 0) {
+    VStack(spacing: 4) {
       ForEach(entries) { e in RailButton(entry: e, active: isActive(e.route)) }
       Spacer()
-      VStack(spacing: 2) {
-        Text("v\(app.serverSettings?.version ?? "2.36")").font(Theme.mono(12)).foregroundStyle(
-          Theme.gray300
-        ).underline()
-        Text(app.onLAN ? "local" : (app.isOnline ? "remote" : "offline"))
-          .font(Theme.sans(10).italic()).foregroundStyle(Theme.gray400)
+      // Nothing to say when the server is on the LAN, which is nearly always.
+      if !app.onLAN {
+        Image(systemName: app.isOnline ? "globe" : "wifi.slash")
+          .font(.system(size: 12))
+          .foregroundStyle(Theme.gray500)
+          .help(app.isOnline ? "Connected remotely" : "Offline")
+          .padding(.bottom, 12)
       }
-      .frame(height: 48)
     }
+    .padding(.top, 10)
     .frame(width: Theme.railWidth)
-    .background(Theme.bg)
-    .shadow(color: Color(hex: 0x111111, opacity: 0.4), radius: 5, x: 5)
-    .zIndex(1)
+    .background(Theme.primary)
+    .overlay(alignment: .trailing) { Color.white.opacity(0.06).frame(width: 1) }
   }
 
   func isActive(_ r: Route) -> Bool {
@@ -283,21 +259,26 @@ private struct RailButton: View {
     Button {
       app.go(entry.route)
     } label: {
-      VStack(spacing: 6) {
-        Icon(entry.icon, size: entry.iconSize)
-        Text(entry.label).font(Theme.sans(14.4)).lineLimit(1).minimumScaleFactor(0.8)
+      VStack(spacing: 4) {
+        Image(systemName: entry.symbol)
+          .symbolVariant(active ? .fill : .none)
+          .font(.system(size: 17, weight: .regular))
+          .frame(height: 20)
+        Text(entry.label).font(.system(size: 10, weight: .medium)).lineLimit(1)
+          .minimumScaleFactor(0.8)
       }
-      .foregroundStyle(entry.id == "home" || entry.id == "library" ? .white : .white.opacity(0.8))
-      .frame(width: Theme.railWidth, height: 80)
+      .foregroundStyle(active ? Theme.accent : hover ? .white : Theme.gray400)
+      .frame(width: Theme.railWidth - 12, height: 54)
       .background(
-        active ? Theme.primary.opacity(0.8) : (hover ? Theme.primary : Theme.bg.opacity(0.6))
+        RoundedRectangle(cornerRadius: 8)
+          .fill(active ? Theme.accent.opacity(0.12) : Color.white.opacity(hover ? 0.06 : 0))
       )
-      .overlay(alignment: .bottom) { Theme.primary.opacity(0.7).frame(height: 1) }
-      .overlay(alignment: .leading) { if active { Theme.yellow400.frame(width: 2) } }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .onHover { hover = $0 }
+    .animation(.easeOut(duration: 0.12), value: hover)
+    .help(entry.label)
   }
 }
 
@@ -310,10 +291,12 @@ struct GlobalSearch: View {
   @FocusState private var focused: Bool
 
   var body: some View {
-    HStack(spacing: 0) {
-      TextField(L.s("PlaceholderSearch"), text: $app.searchText)
+    HStack(spacing: 6) {
+      Image(systemName: "magnifyingglass").font(.system(size: 12, weight: .medium))
+        .foregroundStyle(Theme.gray400)
+      TextField("Search", text: $app.searchText)
         .textFieldStyle(.plain)
-        .font(Theme.sans(14))
+        .font(.system(size: 13))
         .focused($focused)
         .onSubmit {
           let q = app.searchText.trimmingCharacters(in: .whitespaces)
@@ -322,21 +305,25 @@ struct GlobalSearch: View {
           app.go(.search(q))
         }
         .onChange(of: app.searchText) { _, q in schedule(q) }
-      if app.searchText.isEmpty {
-        Icon("search", size: 19).foregroundStyle(Theme.gray400)
-      } else {
-        HoverIcon(icon: "close", size: 19, color: Theme.gray400) {
+      if !app.searchText.isEmpty {
+        Button {
           app.searchText = ""
           results = nil
           showResults = false
+        } label: {
+          Image(systemName: "xmark.circle.fill").font(.system(size: 12))
+            .foregroundStyle(Theme.gray400)
         }
+        .buttonStyle(.plain)
+        .help("Clear")
       }
     }
     .padding(.horizontal, 10)
-    .frame(width: 320, height: 32)
-    .background(Theme.primary)
-    .clipShape(RoundedRectangle(cornerRadius: 4))
-    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.gray600))
+    .frame(width: 320, height: 28)
+    .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(focused ? 0.1 : 0.06)))
+    .overlay(
+      RoundedRectangle(cornerRadius: 7).stroke(
+        focused ? Theme.accent.opacity(0.6) : Color.white.opacity(0.08)))
     // An in-window overlay, not a popover: a popover is its own window and
     // takes the keystrokes that follow while typing.
     .overlay(alignment: .topLeading) {

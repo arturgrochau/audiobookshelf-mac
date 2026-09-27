@@ -1,8 +1,9 @@
 import ABSCore
 import SwiftUI
 
-/// pages/item/_id/index.vue: cover left, details right, buttons, description,
-/// then the Chapters and Audio Tracks tables. No edit pencils: editing is in ⋯.
+/// pages/item/_id/index.vue in the player's language: cover left, details
+/// right, one white Play pill and quiet symbol buttons, then the chapter and
+/// track lists as disclosures. No edit pencils: editing is in ⋯.
 struct ItemPage: View {
   let itemId: String
   var app = AppModel.shared
@@ -24,10 +25,10 @@ struct ItemPage: View {
             buttons(item)
             description(item)
             if let ch = item.media.chapters, !ch.isEmpty {
-              ChaptersTable(item: item, chapters: ch).padding(.top, 24)
+              ChaptersTable(item: item, chapters: ch).padding(.top, 20)
             }
             if let tracks = item.media.tracks, !tracks.isEmpty {
-              TracksTable(tracks: tracks).padding(.top, 24)
+              TracksTable(tracks: tracks).padding(.top, 8)
             }
           }
           .padding(.horizontal, 40)
@@ -49,14 +50,19 @@ struct ItemPage: View {
     let p = app.progress(for: item.id)
     let finished = p?.isFinished == true
     let pct = finished ? 1 : (p?.progress ?? 0)
-    return CoverWithPlay(item: item, aspect: aspect, canPlay: showPlay(item) && !isStreaming(item))
-      .overlay(alignment: .bottomLeading) {
-        if pct > 0 {
-          Rectangle().fill(finished ? Theme.success : Theme.yellow400)
-            .frame(width: 208 * pct, height: 6)
-        }
+    return VStack(spacing: 8) {
+      CoverWithPlay(item: item, aspect: aspect, canPlay: showPlay(item) && !isStreaming(item))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+      if pct > 0 {
+        Capsule().fill(Color.white.opacity(0.1))
+          .overlay(alignment: .leading) {
+            Capsule().fill(finished ? Theme.success : Theme.accent).frame(width: 208 * pct)
+          }
+          .frame(height: 3)
       }
-      .frame(width: 208)
+    }
+    .frame(width: 208)
   }
 
   // MARK: Header
@@ -65,43 +71,41 @@ struct ItemPage: View {
     let md = item.media.metadata
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 6) {
-        Text(item.title).font(Theme.sans(30, .semibold)).textSelection(.enabled)
+        Text(item.title).font(.system(size: 26, weight: .bold)).textSelection(.enabled)
         if md.explicit == true { Badge(text: "E") }
         if md.abridged == true { Badge(text: "A") }
       }
       if let sub = md.subtitle, !sub.isEmpty {
-        Text(sub).font(Theme.sans(24)).foregroundStyle(Theme.gray200)
+        Text(sub).font(.system(size: 15)).foregroundStyle(Theme.gray300).padding(.top, 2)
       }
+      HStack(spacing: 0) {
+        let authors = md.authors ?? []
+        if authors.isEmpty {
+          Text("Unknown").foregroundStyle(Theme.gray200)
+        }
+        ForEach(Array(authors.enumerated()), id: \.offset) { i, a in
+          LinkText(text: a.name, size: 15, color: Theme.gray200) { app.go(.author(a.id)) }
+          if i < authors.count - 1 { Text(", ").foregroundStyle(Theme.gray200) }
+        }
+      }
+      .font(.system(size: 15))
+      .padding(.top, 6)
       if let series = md.series, !series.isEmpty {
         HStack(spacing: 0) {
           ForEach(Array(series.enumerated()), id: \.offset) { i, s in
             LinkText(
-              text: s.sequence.map { "\(s.name) #\($0)" } ?? s.name, size: 18, color: Theme.gray300
+              text: s.sequence.map { "\(s.name) #\($0)" } ?? s.name, size: 13,
+              color: Theme.gray400
             ) {
               app.go(.seriesDetail(s.id))
             }
-            if i < series.count - 1 {
-              Text(", ").font(Theme.sans(18)).foregroundStyle(Theme.gray300)
-            }
+            if i < series.count - 1 { Text(", ").foregroundStyle(Theme.gray400) }
           }
         }
+        .font(.system(size: 13))
+        .padding(.top, 2)
       }
-      HStack(spacing: 0) {
-        Text(L.s("LabelByAuthor", "")).font(Theme.sans(20)).foregroundStyle(Theme.gray200)
-        let authors = md.authors ?? []
-        if authors.isEmpty {
-          Text("Unknown").font(Theme.sans(20)).foregroundStyle(Theme.gray200)
-        }
-        ForEach(Array(authors.enumerated()), id: \.offset) { i, a in
-          LinkText(text: a.name, size: 20, color: Theme.gray200) { app.go(.author(a.id)) }
-          if i < authors.count - 1 {
-            Text(", ").font(Theme.sans(20)).foregroundStyle(Theme.gray200)
-          }
-        }
-      }
-      .padding(.top, 2)
-      .padding(.bottom, 8)
-      DetailsGrid(item: item).padding(.bottom, 16)
+      DetailsGrid(item: item).padding(.top, 16)
     }
   }
 
@@ -111,38 +115,25 @@ struct ItemPage: View {
     if let p = app.progress(for: item.id) {
       let pct = p.isFinished == true ? 1 : (p.progress ?? 0)
       if pct > 0 {
-        VStack(alignment: .leading, spacing: 0) {
+        HStack(spacing: 6) {
           if pct < 1 {
-            Text("\(L.s("LabelYourProgress")): \(Int((pct * 100).rounded()))%")
-              .font(Theme.sans(14, .semibold))
             let remaining = max(0, (p.duration ?? item.duration) - (p.currentTime ?? 0))
-            Text(L.s("LabelTimeRemaining", Format.elapsedPretty(remaining)))
-              .font(Theme.sans(12, .semibold)).foregroundStyle(Theme.gray200)
+            Text("\(Int((pct * 100).rounded()))%").foregroundStyle(Theme.gray200)
+            Text("·")
+            Text("\(Format.elapsedPretty(remaining)) left")
           } else {
-            Text("\(L.s("LabelFinished")) \(Self.date(p.finishedAt))").font(
-              Theme.sans(12, .semibold))
+            Text("\(L.s("LabelFinished")) \(Self.date(p.finishedAt))").foregroundStyle(
+              Theme.gray200)
           }
+          Text("·")
           Text("\(L.s("LabelStarted")) \(Self.date(p.startedAt))")
-            .font(Theme.sans(12, .semibold)).foregroundStyle(Theme.gray400).padding(.top, 4)
-        }
-        .foregroundStyle(Theme.gray100)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Theme.primary)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(alignment: .topTrailing) {
-          Button {
+          SymbolButton(symbol: "xmark", size: 9, weight: .bold, help: "Reset progress") {
             Task { await ItemActions.resetProgress(p) }
-          } label: {
-            Icon("close", size: 14)
-              .frame(width: 20, height: 20)
-              .background(Circle().fill(Theme.bg))
-              .overlay(Circle().stroke(Theme.primary))
           }
-          .buttonStyle(ResetButtonStyle())
-          .offset(x: 6, y: -6)
         }
-        .padding(.top, 16)
+        .font(.system(size: 12))
+        .foregroundStyle(Theme.gray400)
+        .padding(.top, 14)
       }
     }
   }
@@ -163,62 +154,56 @@ struct ItemPage: View {
   private func isStreaming(_ item: LibraryItem) -> Bool { player.item?.id == item.id }
 
   @ViewBuilder private func buttons(_ item: LibraryItem) -> some View {
-    let finished = app.progress(for: item.id)?.isFinished == true
-    HStack(spacing: 4) {
+    let progress = app.progress(for: item.id)
+    let finished = progress?.isFinished == true
+    let started = !finished && (progress?.progress ?? 0) > 0
+    HStack(spacing: 6) {
       if showPlay(item) {
         let streaming = isStreaming(item)
-        WebButton(color: Theme.success, small: true, disabled: streaming, paddingX: 16) {
+        PillButton(
+          title: streaming ? L.s("ButtonPlaying") : started ? "Resume" : L.s("ButtonPlay"),
+          symbol: streaming ? "waveform" : "play.fill", prominent: true, disabled: streaming
+        ) {
           Task { await player.play(item.id) }
-        } label: {
-          HStack(spacing: 4) {
-            if !streaming { Icon("play_arrow", size: 24, filled: true).padding(.leading, -8) }
-            Text(L.s(streaming ? "ButtonPlaying" : "ButtonPlay"))
-          }
-          .frame(height: 28)
         }
-        .padding(.trailing, 4)
       }
       if item.media.hasEbook {
-        WebButton(color: Theme.info, small: true, paddingX: 16) {
+        PillButton(title: L.s("ButtonRead"), symbol: "book") {
           ReaderWindows.open(itemId: item.id)
-        } label: {
-          HStack(spacing: 4) {
-            Icon("auto_stories", size: 24).padding(.leading, -8)
-            Text(L.s("ButtonRead"))
-          }
-          .frame(height: 28)
         }
-        .padding(.trailing, 4)
       }
       if player.hasItem && !isStreaming(item) && item.media.hasAudio {
         let queued = player.isQueued(item.id)
-        IconButton(
-          icon: queued ? "playlist_add_check" : "playlist_play",
-          bg: queued ? Theme.primary : Theme.success.opacity(0.6)
+        SymbolButton(
+          symbol: queued ? "text.badge.checkmark" : "text.badge.plus", size: 15, active: queued,
+          help: L.s(queued ? "ButtonQueueRemoveItem" : "ButtonQueueAddItem")
         ) {
           if queued { player.removeFromQueue(item.id) } else { player.addToQueue(item) }
         }
-        .help(L.s(queued ? "ButtonQueueRemoveItem" : "ButtonQueueAddItem"))
       }
-      IconButton(icon: "beenhere", bg: finished ? Theme.success : Theme.primary) {
+      SymbolButton(
+        symbol: finished ? "checkmark.circle.fill" : "checkmark.circle", size: 16,
+        active: finished,
+        help: L.s(finished ? "MessageMarkAsNotFinished" : "MessageMarkAsFinished")
+      ) {
         Task { await ItemActions.setFinished(item.id, !finished) }
       }
-      .help(L.s(finished ? "MessageMarkAsNotFinished" : "MessageMarkAsFinished"))
       Menu {
         ItemMenu(item: item)
       } label: {
-        Icon("more_vert", size: 24)
-          .frame(width: 36, height: 36)
-          .background(Theme.primary)
-          .clipShape(RoundedRectangle(cornerRadius: 6))
-          .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.gray600))
+        Image(systemName: "ellipsis")
+          .font(.system(size: 15, weight: .medium))
+          .foregroundStyle(Theme.gray300)
+          .frame(width: 31, height: 31)
+          .contentShape(Circle())
       }
       .menuStyle(.button)
       .buttonStyle(.plain)
       .menuIndicator(.hidden)
       .fixedSize()
+      .help("More")
     }
-    .padding(.top, 16)
+    .padding(.top, 18)
   }
 
   // MARK: Description
@@ -228,13 +213,14 @@ struct ItemPage: View {
     if !text.isEmpty {
       VStack(alignment: .leading, spacing: 4) {
         Text(text)
-          .font(Theme.sans(16))
-          .foregroundStyle(Theme.gray100)
+          .font(.system(size: 13))
+          .lineSpacing(3)
+          .foregroundStyle(Theme.gray200)
           .lineLimit(showFullDescription ? nil : 4)
           .textSelection(.enabled)
           .background {
             ViewThatFits(in: .vertical) {
-              Text(text).font(Theme.sans(16)).hidden().onAppear { descriptionClamped = false }
+              Text(text).font(.system(size: 13)).lineSpacing(3).hidden().onAppear { descriptionClamped = false }
               Color.clear.onAppear { descriptionClamped = true }
             }
           }
@@ -242,17 +228,14 @@ struct ItemPage: View {
           Button {
             showFullDescription.toggle()
           } label: {
-            HStack(spacing: 4) {
-              Text(L.s(showFullDescription ? "ButtonReadLess" : "ButtonReadMore"))
-              Icon(showFullDescription ? "expand_less" : "expand_more", size: 20)
-            }
-            .font(Theme.sans(16))
-            .foregroundStyle(Color(hex: 0xCAD5E2))
+            Text(L.s(showFullDescription ? "ButtonReadLess" : "ButtonReadMore"))
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundStyle(Theme.gray400)
           }
           .buttonStyle(.plain)
         }
       }
-      .padding(.vertical, 16)
+      .padding(.top, 20)
     }
   }
 
@@ -296,7 +279,12 @@ private struct CoverWithPlay: View {
         Button {
           Task { await PlayerModel.shared.play(item.id) }
         } label: {
-          Icon("play_arrow", size: 36, filled: true)
+          Image(systemName: "play.fill").font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(Theme.primary)
+            .offset(x: 2)
+            .frame(width: 56, height: 56)
+            .background(Circle().fill(.white))
+            .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
         }
         .buttonStyle(ScaleOnHover())
       }
@@ -308,10 +296,10 @@ private struct CoverWithPlay: View {
 private struct Badge: View {
   let text: String
   var body: some View {
-    Text(text).font(Theme.sans(12, .semibold))
+    Text(text).font(.system(size: 10, weight: .bold))
       .frame(width: 16, height: 16)
       .background(Theme.gray600)
-      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .clipShape(RoundedRectangle(cornerRadius: 3))
   }
 }
 
@@ -324,7 +312,7 @@ struct LinkText: View {
   @State private var hover = false
 
   var body: some View {
-    Text(text).font(Theme.sans(size)).foregroundStyle(color).underline(hover)
+    Text(text).font(.system(size: size)).foregroundStyle(color).underline(hover)
       .onHover { hover = $0 }
       .linkCursor()
       .onTapGesture(perform: action)
@@ -340,8 +328,7 @@ struct DetailsGrid: View {
     let md = item.media.metadata
     VStack(alignment: .leading, spacing: 2) {
       if let n = md.narrators, !n.isEmpty {
-        row("LabelNarrators") { links(n) { FilterEncoding.filter("narrators", $0) } }.padding(
-          .top, 16)
+        row("LabelNarrators") { links(n) { FilterEncoding.filter("narrators", $0) } }
       }
       if let y = md.publishedYear, !y.isEmpty { row("LabelPublishYear") { Text(y) } }
       if let p = md.publisher, !p.isEmpty {
@@ -361,13 +348,14 @@ struct DetailsGrid: View {
       }
       row("LabelSize") { Text(Format.bytesPretty(Double(item.media.size ?? item.size ?? 0))) }
     }
-    .font(Theme.sans(16))
+    .font(.system(size: 13))
+    .foregroundStyle(Theme.gray200)
   }
 
   private func row<V: View>(_ key: String, @ViewBuilder _ value: () -> V) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 0) {
-      Text(L.s(key).uppercased()).font(Theme.sans(14)).foregroundStyle(.white.opacity(0.6))
-        .frame(width: 136, alignment: .leading)
+      Text(L.s(key)).font(.system(size: 12)).foregroundStyle(Theme.gray500)
+        .frame(width: 96, alignment: .leading)
       value()
     }
     .padding(.vertical, 2)
@@ -376,7 +364,7 @@ struct DetailsGrid: View {
   private func links(_ values: [String], filter: @escaping (String) -> String) -> some View {
     HStack(spacing: 0) {
       ForEach(Array(values.enumerated()), id: \.offset) { i, v in
-        LinkText(text: v) { app.go(.filtered(filter(v))) }
+        LinkText(text: v, size: 13, color: Theme.gray200) { app.go(.filtered(filter(v))) }
         if i < values.count - 1 { Text(", ") }
       }
     }
@@ -384,29 +372,29 @@ struct DetailsGrid: View {
   }
 }
 
-/// tables/ChaptersTable.vue: collapsible bar with a count pill; click a start time to seek.
+/// tables/ChaptersTable.vue as a disclosure list; click a chapter to play from it.
 struct ChaptersTable: View {
   let item: LibraryItem
   let chapters: [Chapter]
   @State private var expanded = false
 
   var body: some View {
-    VStack(spacing: 0) {
+    VStack(alignment: .leading, spacing: 0) {
       TableHeader(title: L.s("HeaderChapters"), count: chapters.count, expanded: $expanded)
       if expanded {
-        WebTable(columns: [
-          ("Id", 64, .leading), (L.s("LabelTitle"), nil, .leading),
-          (L.s("LabelStart"), 100, .center), (L.s("LabelDuration"), 100, .center),
-        ]) {
+        ListRows {
           ForEach(Array(chapters.enumerated()), id: \.offset) { i, c in
-            WebTableRow(index: i) {
-              Text("\(c.id)").frame(width: 64, alignment: .leading).padding(.leading, 16)
-              Text(c.title).frame(maxWidth: .infinity, alignment: .leading).lineLimit(1)
-              Text(Format.timestamp(c.start)).font(Theme.mono(14)).frame(width: 100)
-                .underline(false).linkCursor()
-                .onTapGesture { Task { await ItemActions.playFrom(item, time: c.start) } }
-              Text(Format.timestamp(max(0, c.end - c.start))).font(Theme.mono(14)).frame(width: 100)
+            ListRow {
+              Task { await ItemActions.playFrom(item, time: c.start) }
+            } content: {
+              Text("\(i + 1)").foregroundStyle(Theme.gray500).frame(width: 28, alignment: .leading)
+              Text(c.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+              Text(Format.timestamp(c.start)).foregroundStyle(Theme.gray400)
+                .frame(width: 72, alignment: .trailing)
+              Text(Format.timestamp(max(0, c.end - c.start))).foregroundStyle(Theme.gray500)
+                .frame(width: 72, alignment: .trailing)
             }
+            .help("Play from \(Format.timestamp(c.start))")
           }
         }
       }
@@ -420,21 +408,19 @@ struct TracksTable: View {
   @State private var expanded = false
 
   var body: some View {
-    VStack(spacing: 0) {
+    VStack(alignment: .leading, spacing: 0) {
       TableHeader(title: L.s("LabelStatsAudioTracks"), count: tracks.count, expanded: $expanded)
       if expanded {
-        WebTable(columns: [
-          ("#", 64, .leading), (L.s("LabelFilename"), nil, .leading),
-          (L.s("LabelSize"), 100, .center), (L.s("LabelDuration"), 100, .center),
-        ]) {
-          ForEach(Array(tracks.sorted { $0.index < $1.index }.enumerated()), id: \.offset) { i, t in
-            WebTableRow(index: i) {
-              Text("\(t.index)").frame(width: 64, alignment: .leading).padding(.leading, 16)
-              Text(t.metadata?.filename ?? t.title ?? "").frame(
-                maxWidth: .infinity, alignment: .leading
-              ).lineLimit(1)
-              Text(Format.bytesPretty(Double(t.metadata?.size ?? 0))).frame(width: 100)
-              Text(Format.timestamp(t.duration)).font(Theme.mono(14)).frame(width: 100)
+        ListRows {
+          ForEach(Array(tracks.sorted { $0.index < $1.index }.enumerated()), id: \.offset) { _, t in
+            ListRow {
+              Text("\(t.index)").foregroundStyle(Theme.gray500).frame(width: 28, alignment: .leading)
+              Text(t.metadata?.filename ?? t.title ?? "").lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+              Text(Format.bytesPretty(Double(t.metadata?.size ?? 0))).foregroundStyle(Theme.gray400)
+                .frame(width: 72, alignment: .trailing)
+              Text(Format.timestamp(t.duration)).foregroundStyle(Theme.gray500)
+                .frame(width: 72, alignment: .trailing)
             }
           }
         }
@@ -443,30 +429,95 @@ struct TracksTable: View {
   }
 }
 
+/// "Chapters 19 ›": a disclosure row, the chevron turns down when open.
 struct TableHeader: View {
   let title: String
   let count: Int
   @Binding var expanded: Bool
+  @State private var hover = false
 
   var body: some View {
-    HStack(spacing: 0) {
-      Text(title).font(Theme.sans(16)).padding(.trailing, 16)
-      Text("\(count)").font(Theme.mono(14))
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Theme.black400).clipShape(RoundedRectangle(cornerRadius: 12))
+    HStack(spacing: 8) {
+      Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+        .rotationEffect(.degrees(expanded ? 90 : 0))
+        .foregroundStyle(Theme.gray400)
+        .frame(width: 12)
+      Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(
+        hover ? .white : Theme.gray200)
+      Text("\(count)").font(.system(size: 12)).foregroundStyle(Theme.gray500)
       Spacer()
-      Icon("expand_more", size: 36)
-        .rotationEffect(.degrees(expanded ? 180 : 0))
-        .frame(width: 40, height: 40)
     }
-    .padding(.horizontal, 24)
     .padding(.vertical, 8)
-    .background(Theme.primary)
     .contentShape(Rectangle())
-    .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() } }
+    .onHover { hover = $0 }
+    .onTapGesture { withAnimation(.easeInOut(duration: 0.18)) { expanded.toggle() } }
   }
 }
 
+/// The rows under a disclosure: hairline separators, no zebra, no frame.
+struct ListRows<Rows: View>: View {
+  @ViewBuilder var rows: () -> Rows
+
+  var body: some View {
+    LazyVStack(spacing: 0) { rows() }
+      .font(.system(size: 12).monospacedDigit())
+      .foregroundStyle(Theme.gray200)
+      .padding(.leading, 20)
+      .padding(.bottom, 8)
+  }
+}
+
+struct ListRow<Content: View>: View {
+  var action: (() -> Void)?
+  @ViewBuilder var content: () -> Content
+  @State private var hover = false
+
+  var body: some View {
+    HStack(spacing: 8) { content() }
+      .padding(.horizontal, 8)
+      .frame(height: 28)
+      .background(
+        RoundedRectangle(cornerRadius: 5).fill(
+          Color.white.opacity(hover && action != nil ? 0.06 : 0))
+      )
+      .contentShape(Rectangle())
+      .onHover { hover = $0 }
+      .onTapGesture { action?() }
+  }
+}
+
+/// A capsule text button: white when it is the thing to press, glass otherwise.
+struct PillButton: View {
+  let title: String
+  var symbol: String?
+  var prominent = false
+  var disabled = false
+  let action: () -> Void
+  @State private var hover = false
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        if let symbol { Image(systemName: symbol).font(.system(size: 11, weight: .bold)) }
+        Text(title).font(.system(size: 13, weight: .semibold))
+      }
+      .foregroundStyle(prominent ? Theme.primary : .white)
+      .padding(.horizontal, 16)
+      .frame(height: 30)
+      .background(
+        Capsule().fill(
+          prominent
+            ? Color.white.opacity(disabled ? 0.55 : hover ? 0.9 : 1)
+            : Color.white.opacity(hover ? 0.14 : 0.08))
+      )
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
+    .disabled(disabled)
+    .onHover { hover = $0 }
+    .animation(.easeOut(duration: 0.12), value: hover)
+  }
+}
 /// `.tracksTable`: header row on primary, zebra rows, 14 px text.
 struct WebTable<Rows: View>: View {
   let columns: [(String, CGFloat?, Alignment)]
