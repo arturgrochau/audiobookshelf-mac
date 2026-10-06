@@ -73,9 +73,9 @@ enum Theme {
 }
 
 /// One colour scheme. The stock palette is the web client's exact values;
-/// the others are well-known editor schemes (all MIT licensed) mapped onto
-/// the same roles, with the grey ramp mixed from their text and background
-/// so contrast steps match the original.
+/// Nord, Catppuccin and Latte follow those MIT-licensed schemes; Light, Space
+/// and Princess are our own. All map onto the same roles, with the grey ramp
+/// mixed from text and background so contrast steps match the original.
 struct Palette: Identifiable, Equatable {
   let id: String
   let name: String
@@ -118,9 +118,9 @@ struct Palette: Identifiable, Equatable {
       accent: 0x0E9F6E, link: 0x2F5BEA, yellow: 0xD99A00, error: 0xD32F2F, info: 0x1976D2,
       success: 0x2E7D32, warning: 0xE67700, gradient: (0xFAFAF9, 0xEBEBEA)),
     make(
-      "space", "Space", "Tokyo Night", dark: true, bg: 0x1F2335, primary: 0x16161E,
-      ink: 0xC0CAF5, accent: 0x7AA2F7, link: 0x7DCFFF, yellow: 0xE0AF68, error: 0xF7768E,
-      info: 0x7AA2F7, success: 0x9ECE6A, warning: 0xFF9E64, gradient: (0x1F2335, 0x13141C)),
+      "space", "Space", "Tokyo Night accents", dark: true, bg: 0x15132B, primary: 0x0C0B1A,
+      ink: 0xD6DCFF, accent: 0x7DCFFF, link: 0xBB9AF7, yellow: 0xE0AF68, error: 0xF7768E,
+      info: 0x7AA2F7, success: 0x9ECE6A, warning: 0xFF9E64, gradient: (0x251B4D, 0x09091A)),
     make(
       "nord", "Nord", "Nord", dark: true, bg: 0x3B4252, primary: 0x2E3440, ink: 0xECEFF4,
       accent: 0x88C0D0, link: 0x81A1C1, yellow: 0xEBCB8B, error: 0xBF616A, info: 0x5E81AC,
@@ -130,13 +130,13 @@ struct Palette: Identifiable, Equatable {
       ink: 0xCDD6F4, accent: 0xCBA6F7, link: 0x89B4FA, yellow: 0xF9E2AF, error: 0xF38BA8,
       info: 0x89B4FA, success: 0xA6E3A1, warning: 0xFAB387, gradient: (0x1E1E2E, 0x11111B)),
     make(
-      "latte", "Latte", "Catppuccin Latte", dark: false, bg: 0xE6E9EF, primary: 0xEFF1F5,
+      "latte", "Latte", "Catppuccin Latte", dark: false, bg: 0xDCE0E8, primary: 0xE6E9EF,
       ink: 0x4C4F69, accent: 0x8839EF, link: 0x1E66F5, yellow: 0xDF8E1D, error: 0xD20F39,
-      info: 0x1E66F5, success: 0x40A02B, warning: 0xFE640B, gradient: (0xEFF1F5, 0xE6E9EF)),
+      info: 0x1E66F5, success: 0x40A02B, warning: 0xFE640B, gradient: (0xE6E9EF, 0xCCD0DA)),
     make(
-      "princess", "Princess", "Rosé Pine Dawn", dark: false, bg: 0xF2E9E1, primary: 0xFFFAF3,
-      ink: 0x575279, accent: 0xB4637A, link: 0x907AA9, yellow: 0xEA9D34, error: 0xB4434F,
-      info: 0x286983, success: 0x56949F, warning: 0xD7827E, gradient: (0xFFFAF3, 0xF2E9E1)),
+      "princess", "Princess", nil, dark: false, bg: 0xF1D3E0, primary: 0xFAE8F0,
+      ink: 0x4A2141, accent: 0xC2185B, link: 0x8E44AD, yellow: 0xD4880F, error: 0xB3261E,
+      info: 0x6A4C93, success: 0x2E7D5B, warning: 0xC56A1A, gradient: (0xF7E1EB, 0xE9C3D4)),
   ]
 
   static func named(_ id: String?) -> Palette? { all.first { $0.id == id } }
