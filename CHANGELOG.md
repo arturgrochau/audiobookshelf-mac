@@ -7,6 +7,7 @@ All notable changes to this project. The format follows [Keep a Changelog](https
 ### Changed
 
 - Space, Latte and Princess look clearly different from the other themes. Space is near-black with a purple glow and cyan accents, Latte is a cool lavender-grey, and Princess is a soft pink with plum text and a rose accent.
+- The README shows four short feature clips (themes, browsing, the player and the mini player) in a grid instead of one long demo.
 
 ## [0.2.0] - 2026-10-06
 
