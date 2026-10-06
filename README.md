@@ -1,6 +1,6 @@
 # Audiobookshelf for macOS (unofficial)
 
-[![CI](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml/badge.svg)](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![CI](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml/badge.svg)](https://github.com/arturgrochau/audiobookshelf-mac/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/arturgrochau/audiobookshelf-mac)](https://github.com/arturgrochau/audiobookshelf-mac/releases) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf). It looks and works like the web client, with the same pages, player controls and wording, but plays audio through AVFoundation and feels like a Mac app.
 
@@ -24,6 +24,8 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 ## Themes
 
 The sun/moon button in the top right flips between light and dark (`⌥⌘L`). Right-click it, or open Settings, for every theme: Audiobookshelf (the web client's colours), Light, Space (Tokyo Night), Nord, Catppuccin, Latte and Princess (Rosé Pine Dawn). "Match system appearance" follows macOS light and dark mode.
+
+![Audiobookshelf, Light, Space and Princess themes](docs/themes.jpg)
 
 ## Keys
 
@@ -55,6 +57,8 @@ Needs macOS 15 or later and the Xcode Command Line Tools.
 Set `SIGN_IDENTITY` to a code-signing identity (a self-signed one is fine) if you want the Local Network permission to survive rebuilds.
 
 The lid-closed option installs one sudoers rule, `/etc/sudoers.d/audiobookshelf-lid`, that allows only `pmset -a disablesleep 0|1`. Remove that file to undo it. If lid sleep ever stays off after a crash or power loss, the next launch restores it, or run `sudo pmset -a disablesleep 0`.
+
+What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
