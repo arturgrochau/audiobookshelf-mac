@@ -4,9 +4,27 @@
 
 A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf). It looks and works like the web client, with the same pages, player controls and wording, but plays audio through AVFoundation and feels like a Mac app.
 
-![Demo: home shelves, speed and sleep timer, chapters, the mini player over the desktop, library and authors](docs/demo.gif)
+## Tour
 
-<sub>19 seconds, sped up 1.25x. [MP4 version](docs/demo.mp4).</sub>
+Four short clips, about 13 seconds each, sped up 1.25x.
+
+**1. Themes.** One click switches between light and dark. Seven themes recolour the whole app.
+
+![Themes: the light and dark toggle, then picking a theme](docs/clips/themes.gif)
+
+**2. Browsing.** Home, library, series, collections, authors and narrators, laid out like the web client.
+
+![Browsing the home page, library, series, authors and narrators](docs/clips/browse.gif)
+
+**3. The player.** Sleep timer, keep awake, chapters and player settings, all from the bar at the bottom.
+
+![The player: sleep timer, keep awake, chapters and settings](docs/clips/player.gif)
+
+**4. Mini player.** `⌘⇧M` opens a small panel that floats over other apps. Set its opacity and speed, or click the cover to go back.
+
+![The mini player floating over the desktop, with opacity and speed menus](docs/clips/mini-player.gif)
+
+<sub>MP4 versions: [themes](docs/clips/themes.mp4), [browsing](docs/clips/browse.mp4), [player](docs/clips/player.mp4), [mini player](docs/clips/mini-player.mp4).</sub>
 
 ## Listening
 
