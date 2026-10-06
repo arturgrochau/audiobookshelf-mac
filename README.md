@@ -4,27 +4,26 @@
 
 A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf). It looks and works like the web client, with the same pages, player controls and wording, but plays audio through AVFoundation and feels like a Mac app.
 
-## Tour
+<table>
+  <tr>
+    <td width="50%"><img src="docs/clips/themes.gif" alt="Switching between light and dark, then picking a theme"></td>
+    <td width="50%"><img src="docs/clips/browse.gif" alt="Scrolling the home page, then the library, series, authors and narrators"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Themes</b><br><sub>Light or dark in one click, or pick from seven</sub></td>
+    <td align="center"><b>Browse</b><br><sub>Every page of the web client, native</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/player.gif" alt="Sleep timer, keep awake, chapters and player settings"></td>
+    <td width="50%"><img src="docs/clips/mini-player.gif" alt="The mini player floating over the desktop, with opacity and speed menus"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Player</b><br><sub>Sleep timer, keep awake, chapters</sub></td>
+    <td align="center"><b>Mini player</b><br><sub>Floats above everything, <code>⌘⇧M</code></sub></td>
+  </tr>
+</table>
 
-Four short clips, about 13 seconds each, sped up 1.25x.
-
-**1. Themes.** One click switches between light and dark. Seven themes recolour the whole app.
-
-![Themes: the light and dark toggle, then picking a theme](docs/clips/themes.gif)
-
-**2. Browsing.** Home, library, series, collections, authors and narrators, laid out like the web client.
-
-![Browsing the home page, library, series, authors and narrators](docs/clips/browse.gif)
-
-**3. The player.** Sleep timer, keep awake, chapters and player settings, all from the bar at the bottom.
-
-![The player: sleep timer, keep awake, chapters and settings](docs/clips/player.gif)
-
-**4. Mini player.** `⌘⇧M` opens a small panel that floats over other apps. Set its opacity and speed, or click the cover to go back.
-
-![The mini player floating over the desktop, with opacity and speed menus](docs/clips/mini-player.gif)
-
-<sub>MP4 versions: [themes](docs/clips/themes.mp4), [browsing](docs/clips/browse.mp4), [player](docs/clips/player.mp4), [mini player](docs/clips/mini-player.mp4).</sub>
+<sub>Sped up 1.25x. Full quality MP4s: [themes](docs/clips/themes.mp4), [browse](docs/clips/browse.mp4), [player](docs/clips/player.mp4), [mini player](docs/clips/mini-player.mp4).</sub>
 
 ## Listening
 
