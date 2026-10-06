@@ -38,7 +38,7 @@ struct GroupCard: View {
       .shadow(color: Color(hex: 0x111111, opacity: 0.4), radius: 4, x: 3, y: 1)
       .onHover { hover = $0 }
       .onTapGesture(perform: action)
-      Text(name).font(Theme.sans(0.9 * em)).foregroundStyle(.white).lineLimit(1)
+      Text(name).font(Theme.sans(0.9 * em)).foregroundStyle(Theme.ink).lineLimit(1)
         .padding(.top, 0.5 * em)
       Text("\(books.count) \(L.s("LabelBooks"))").font(Theme.sans(0.8 * em))
         .foregroundStyle(Theme.gray400)
@@ -299,7 +299,7 @@ struct SearchPage: View {
             app.go(.filtered(FilterEncoding.filter(group, match.name)))
           } label: {
             HStack(spacing: 12) {
-              Text(match.name).foregroundStyle(.white)
+              Text(match.name).foregroundStyle(Theme.ink)
               if let count = match.numBooks ?? match.numItems {
                 Text("\(count) \(L.s("LabelBooks"))").foregroundStyle(Theme.gray400)
               }
@@ -340,13 +340,13 @@ struct AccountPage: View {
       Text(L.s("HeaderAccount")).font(Theme.sans(30, .semibold))
       HStack(spacing: 0) {
         Text(L.s("LabelUsername").uppercased()).font(Theme.sans(14)).foregroundStyle(
-          .white.opacity(0.6)
+          Theme.ink.opacity(0.6)
         )
         .frame(width: 136, alignment: .leading)
         Text(app.user?.username ?? "").font(Theme.sans(16))
       }
       HStack(spacing: 0) {
-        Text("SERVER").font(Theme.sans(14)).foregroundStyle(.white.opacity(0.6))
+        Text("SERVER").font(Theme.sans(14)).foregroundStyle(Theme.ink.opacity(0.6))
           .frame(width: 136, alignment: .leading)
         Text(app.account?.serverURL.absoluteString ?? "").font(Theme.sans(16))
       }

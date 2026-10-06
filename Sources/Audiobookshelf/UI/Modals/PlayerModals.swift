@@ -75,7 +75,7 @@ struct SleepTimerModal: View {
           }
           Text(Format.timestamp(remaining))
             .font(.system(size: 26, weight: .medium).monospacedDigit())
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.ink)
             .frame(minWidth: 84)
           SymbolButton(symbol: "plus", size: 12, weight: .bold, help: "5 minutes more") {
             player.incrementSleepTimer(5 * 60)
@@ -84,7 +84,7 @@ struct SleepTimerModal: View {
         }
       } else {
         Text(L.s("LabelEndOfChapter")).font(.system(size: 17, weight: .medium))
-          .foregroundStyle(.white)
+          .foregroundStyle(Theme.ink)
       }
       PillButton(title: "Turn Off Timer") {
         player.cancelSleepTimer()
@@ -119,7 +119,7 @@ struct ChaptersModal: View {
                   .opacity(isCurrent || done ? 1 : 0)
                   .frame(width: 14)
                 Text(c.title).lineLimit(1)
-                  .foregroundStyle(isCurrent ? .white : done ? Theme.gray400 : Theme.gray100)
+                  .foregroundStyle(isCurrent ? Theme.ink : done ? Theme.gray400 : Theme.gray100)
                 Spacer()
                 Text(Format.elapsedPrettyExtended((c.end - c.start) / player.rate))
                   .foregroundStyle(Theme.gray500)
@@ -359,7 +359,7 @@ struct ModalRow<Content: View>: View {
       .frame(height: height)
       .background(
         RoundedRectangle(cornerRadius: 7).fill(
-          selected ? Theme.accent.opacity(0.12) : Color.white.opacity(hover ? 0.06 : 0))
+          selected ? Theme.accent.opacity(0.12) : Theme.ink.opacity(hover ? 0.06 : 0))
       )
       .contentShape(Rectangle())
       .onHover { hover = $0 }
@@ -381,10 +381,10 @@ struct ModalField: View {
       .focused($focused)
       .padding(.horizontal, 10)
       .frame(height: 30)
-      .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.07)))
+      .background(RoundedRectangle(cornerRadius: 7).fill(Theme.ink.opacity(0.07)))
       .overlay(
         RoundedRectangle(cornerRadius: 7).stroke(
-          focused ? Theme.accent.opacity(0.6) : Color.white.opacity(0.08))
+          focused ? Theme.accent.opacity(0.6) : Theme.ink.opacity(0.08))
       )
       .onSubmit(onSubmit)
   }

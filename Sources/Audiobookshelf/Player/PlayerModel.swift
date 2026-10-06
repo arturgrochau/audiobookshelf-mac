@@ -219,19 +219,13 @@ final class PlayerModel {
     timeline = tl
     displayTitle = s.displayTitle ?? displayTitle
     displayAuthor = s.displayAuthor ?? displayAuthor
-    let base = app.streamBase
-    let sources =
-      localTracks
-      ?? s.audioTracks.sorted { $0.startOffset < $1.startOffset }.map {
-        TrackSource(
-          url: base.appendingPathComponent("public/session/\(s.id)/track/\($0.index)"),
-          startOffset: $0.startOffset, duration: $0.duration)
-      }
+    let sources = localTracks ?? streamSources(s)
     sync = SyncPolicy(sessionStartTime: start)
     sync.lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
     sessionLost = false
     engine.pitchAlgorithm = settings.pitchAlgorithm == "spectral" ? .spectral : .timeDomain
     engine.volume = volume * fadeMultiplier
+    isLocalPlayback = localTracks != nil
     engine.load(
       sources, at: start, rate: rate, autoplay: true, localFiles: localTracks != nil || app.onLAN)
     currentTime = start
@@ -239,6 +233,44 @@ final class PlayerModel {
     applyAutoSleepIfNeeded()
     startTicking()
     NowPlaying.shared.update(full: true)
+  }
+
+  private func streamSources(_ s: PlaybackSession) -> [TrackSource] {
+    let base = app.streamBase
+    return s.audioTracks.sorted { $0.startOffset < $1.startOffset }.map {
+      TrackSource(
+        url: base.appendingPathComponent("public/session/\(s.id)/track/\($0.index)"),
+        startOffset: $0.startOffset, duration: $0.duration)
+    }
+  }
+
+  /// The playing book finished downloading, or its download was removed:
+  /// carry on from the other copy without a cut. The server session stays
+  /// open either way, so progress keeps syncing as before.
+  func downloadChanged(_ itemId: String) {
+    guard let item, item.id == itemId else { return }
+    if let local = DownloadManager.shared.localTracks(for: item) {
+      guard !isLocalPlayback, session != nil else { return }
+      if engine.swapSources(local, localFiles: true) { isLocalPlayback = true }
+      return
+    }
+    guard isLocalPlayback else { return }
+    // The files are already gone. Offline there is no stream to fall back on.
+    guard let s = session else {
+      Task { await close() }
+      app.toast("The download was removed, so playback stopped.", .info)
+      return
+    }
+    // Playing on a live session: the seamless path. Otherwise (paused, a
+    // session that may have expired, a layout that doesn't match) reopen
+    // the session on the stream at the same position, keeping play/pause.
+    if engine.isPlaying, !sessionLost,
+      engine.swapSources(streamSources(s), localFiles: app.onLAN)
+    {
+      isLocalPlayback = false
+    } else {
+      Task { await recoverSession(autoplay: engine.isPlaying) }
+    }
   }
 
   private func startLocalSession(_ it: LibraryItem, localTracks: [TrackSource], startTime: Double?)

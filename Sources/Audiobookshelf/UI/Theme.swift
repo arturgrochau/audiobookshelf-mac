@@ -2,44 +2,50 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Design tokens from client/assets/tailwind.css (@theme) and app.css.
+/// Design tokens from client/assets/tailwind.css (@theme) and app.css, read
+/// from the active palette. Views read them in `body`, so Observation redraws
+/// whatever uses a token when the palette changes.
 enum Theme {
-  static let bg = Color(hex: 0x373838)
-  static let primary = Color(hex: 0x232323)
-  static let accent = Color(hex: 0x1AD691)
-  static let error = Color(hex: 0xFF5252)
-  static let info = Color(hex: 0x2196F3)
-  static let success = Color(hex: 0x4CAF50)
-  static let warning = Color(hex: 0xFB8C00)
-  static let yellow400 = Color(hex: 0xFDC700)
-  static let yellow300 = Color(hex: 0xFFDF20)
-  static let gray100 = Color(hex: 0xF3F4F6)
-  static let gray200 = Color(hex: 0xE5E7EB)
-  static let gray300 = Color(hex: 0xD1D5DC)
-  static let gray400 = Color(hex: 0x99A1AF)
-  static let gray500 = Color(hex: 0x6A7282)
-  static let gray600 = Color(hex: 0x4A5565)
-  static let gray700 = Color(hex: 0x364153)
-  static let black50 = Color(hex: 0xBBBBBB)
-  static let black100 = Color(hex: 0x666666)
-  static let black200 = Color(hex: 0x555555)
-  static let black300 = Color(hex: 0x444444)
-  static let black400 = Color(hex: 0x333333)
-  static let black500 = Color(hex: 0x222222)
-  static let link = Color(hex: 0x5985FF)
+  private static var p: Palette { ThemeStore.shared.palette }
+
+  static var bg: Color { p.bg }
+  static var primary: Color { p.primary }
+  /// Text and icons on the app's own surfaces (white in the dark palettes).
+  static var ink: Color { p.ink }
+  static var accent: Color { p.accent }
+  static var error: Color { p.error }
+  static var info: Color { p.info }
+  static var success: Color { p.success }
+  static var warning: Color { p.warning }
+  static var yellow400: Color { p.yellow400 }
+  static var yellow300: Color { p.yellow300 }
+  static var gray100: Color { p.gray[0] }
+  static var gray200: Color { p.gray[1] }
+  static var gray300: Color { p.gray[2] }
+  static var gray400: Color { p.gray[3] }
+  static var gray500: Color { p.gray[4] }
+  static var gray600: Color { p.gray[5] }
+  static var gray700: Color { p.gray[6] }
+  static var black300: Color { p.black300 }
+  static var black400: Color { p.black400 }
+  static var link: Color { p.link }
   static let seriesBadge = Color(
     red: 0xCD / 255, green: 0x9D / 255, blue: 0x49 / 255, opacity: 0xDD / 255)
-  static let tableBorder = Color(hex: 0x474747)
-  static let tableEven = Color(hex: 0x2E2E2E)
-
+  static var tableBorder: Color { p.tableBorder }
+  static var tableEven: Color { p.tableEven }
   /// `#bookshelf` / `#page-wrapper` background.
-  static let pageGradient = LinearGradient(
-    colors: [
-      0x2E2E2E, 0x303030, 0x313131, 0x333333, 0x353535, 0x343434, 0x323232, 0x313131, 0x2C2C2C,
-      0x282828, 0x232323, 0x1F1F1F,
-    ]
-    .map { Color(hex: $0) },
-    startPoint: .topLeading, endPoint: .bottomTrailing)
+  static var pageGradient: LinearGradient { p.pageGradient }
+  static var isDark: Bool { p.isDark }
+  static var scheme: ColorScheme { p.isDark ? .dark : .light }
+  /// Dark glyphs on the white play disc drawn over cover art, any palette.
+  static let onLight = Color(hex: 0x232323)
+
+  /// White or the palette's dark ink, whichever reads on `fill`.
+  static func ink(on fill: Color) -> Color {
+    guard let c = NSColor(fill).usingColorSpace(.sRGB) else { return .white }
+    let l = 0.2126 * c.redComponent + 0.7152 * c.greenComponent + 0.0722 * c.blueComponent
+    return l > 0.6 ? (p.isDark ? Color(hex: 0x1C1C1E) : p.ink) : .white
+  }
 
   static let railWidth: CGFloat = 72
   static let toolbarHeight: CGFloat = 40
@@ -64,6 +70,188 @@ enum Theme {
       CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }
   }
+}
+
+/// One colour scheme. The stock palette is the web client's exact values;
+/// the others are well-known editor schemes (all MIT licensed) mapped onto
+/// the same roles, with the grey ramp mixed from their text and background
+/// so contrast steps match the original.
+struct Palette: Identifiable, Equatable {
+  let id: String
+  let name: String
+  let credit: String?
+  let isDark: Bool
+  let bg, primary, ink, accent, link, yellow400, yellow300: Color
+  let error, info, success, warning: Color
+  let gray: [Color]
+  let black300, black400, tableBorder, tableEven: Color
+  let pageGradient: LinearGradient
+  let swatch: [Color]
+
+  static func == (a: Palette, b: Palette) -> Bool { a.id == b.id }
+
+  static let audiobookshelf = Palette(
+    id: "audiobookshelf", name: "Audiobookshelf", credit: nil, isDark: true,
+    bg: Color(hex: 0x373838), primary: Color(hex: 0x232323), ink: .white,
+    accent: Color(hex: 0x1AD691), link: Color(hex: 0x5985FF),
+    yellow400: Color(hex: 0xFDC700), yellow300: Color(hex: 0xFFDF20),
+    error: Color(hex: 0xFF5252), info: Color(hex: 0x2196F3), success: Color(hex: 0x4CAF50),
+    warning: Color(hex: 0xFB8C00),
+    gray: [0xF3F4F6, 0xE5E7EB, 0xD1D5DC, 0x99A1AF, 0x6A7282, 0x4A5565, 0x364153].map {
+      Color(hex: $0)
+    },
+    black300: Color(hex: 0x444444), black400: Color(hex: 0x333333),
+    tableBorder: Color(hex: 0x474747), tableEven: Color(hex: 0x2E2E2E),
+    pageGradient: LinearGradient(
+      colors: [
+        0x2E2E2E, 0x303030, 0x313131, 0x333333, 0x353535, 0x343434, 0x323232, 0x313131,
+        0x2C2C2C, 0x282828, 0x232323, 0x1F1F1F,
+      ]
+      .map { Color(hex: $0) },
+      startPoint: .topLeading, endPoint: .bottomTrailing),
+    swatch: [0x373838, 0x232323, 0x1AD691, 0xFDC700].map { Color(hex: $0) })
+
+  static let all: [Palette] = [
+    audiobookshelf,
+    make(
+      "light", "Light", nil, dark: false, bg: 0xF2F2F1, primary: 0xFFFFFF, ink: 0x1C1C1E,
+      accent: 0x0E9F6E, link: 0x2F5BEA, yellow: 0xD99A00, error: 0xD32F2F, info: 0x1976D2,
+      success: 0x2E7D32, warning: 0xE67700, gradient: (0xFAFAF9, 0xEBEBEA)),
+    make(
+      "space", "Space", "Tokyo Night", dark: true, bg: 0x1F2335, primary: 0x16161E,
+      ink: 0xC0CAF5, accent: 0x7AA2F7, link: 0x7DCFFF, yellow: 0xE0AF68, error: 0xF7768E,
+      info: 0x7AA2F7, success: 0x9ECE6A, warning: 0xFF9E64, gradient: (0x1F2335, 0x13141C)),
+    make(
+      "nord", "Nord", "Nord", dark: true, bg: 0x3B4252, primary: 0x2E3440, ink: 0xECEFF4,
+      accent: 0x88C0D0, link: 0x81A1C1, yellow: 0xEBCB8B, error: 0xBF616A, info: 0x5E81AC,
+      success: 0xA3BE8C, warning: 0xD08770, gradient: (0x394050, 0x2A2F3A)),
+    make(
+      "mocha", "Catppuccin", "Catppuccin Mocha", dark: true, bg: 0x1E1E2E, primary: 0x181825,
+      ink: 0xCDD6F4, accent: 0xCBA6F7, link: 0x89B4FA, yellow: 0xF9E2AF, error: 0xF38BA8,
+      info: 0x89B4FA, success: 0xA6E3A1, warning: 0xFAB387, gradient: (0x1E1E2E, 0x11111B)),
+    make(
+      "latte", "Latte", "Catppuccin Latte", dark: false, bg: 0xE6E9EF, primary: 0xEFF1F5,
+      ink: 0x4C4F69, accent: 0x8839EF, link: 0x1E66F5, yellow: 0xDF8E1D, error: 0xD20F39,
+      info: 0x1E66F5, success: 0x40A02B, warning: 0xFE640B, gradient: (0xEFF1F5, 0xE6E9EF)),
+    make(
+      "princess", "Princess", "Rosé Pine Dawn", dark: false, bg: 0xF2E9E1, primary: 0xFFFAF3,
+      ink: 0x575279, accent: 0xB4637A, link: 0x907AA9, yellow: 0xEA9D34, error: 0xB4434F,
+      info: 0x286983, success: 0x56949F, warning: 0xD7827E, gradient: (0xFFFAF3, 0xF2E9E1)),
+  ]
+
+  static func named(_ id: String?) -> Palette? { all.first { $0.id == id } }
+
+  private static func make(
+    _ id: String, _ name: String, _ credit: String?, dark: Bool, bg: UInt32, primary: UInt32,
+    ink: UInt32, accent: UInt32, link: UInt32, yellow: UInt32, error: UInt32, info: UInt32,
+    success: UInt32, warning: UInt32, gradient: (UInt32, UInt32)
+  ) -> Palette {
+    // Where the stock greys sit between white text and the page, 0 = text.
+    let steps = [0.06, 0.12, 0.2, 0.42, 0.58, 0.72, 0.82]
+    return Palette(
+      id: id, name: name, credit: credit, isDark: dark,
+      bg: Color(hex: bg), primary: Color(hex: primary), ink: Color(hex: ink),
+      accent: Color(hex: accent), link: Color(hex: link), yellow400: Color(hex: yellow),
+      yellow300: mix(yellow, dark ? 0xFFFFFF : ink, 0.2),
+      error: Color(hex: error), info: Color(hex: info), success: Color(hex: success),
+      warning: Color(hex: warning),
+      gray: steps.map { mix(ink, bg, $0) },
+      black300: mix(bg, ink, 0.08),
+      black400: dark ? mix(bg, primary, 0.3) : mix(bg, ink, 0.05),
+      tableBorder: mix(bg, ink, 0.07),
+      tableEven: dark ? mix(bg, primary, 0.6) : mix(bg, ink, 0.03),
+      pageGradient: LinearGradient(
+        colors: [Color(hex: gradient.0), Color(hex: gradient.1)],
+        startPoint: .topLeading, endPoint: .bottomTrailing),
+      swatch: [bg, primary, accent, yellow].map { Color(hex: $0) })
+  }
+
+  private static func mix(_ a: UInt32, _ b: UInt32, _ t: Double) -> Color {
+    func ch(_ v: UInt32, _ s: UInt32) -> Double { Double((v >> s) & 0xFF) / 255 }
+    func m(_ s: UInt32) -> Double { ch(a, s) * (1 - t) + ch(b, s) * t }
+    return Color(.sRGB, red: m(16), green: m(8), blue: m(0))
+  }
+}
+
+/// The chosen palette, kept in UserDefaults. The light/dark toggle flips to
+/// the last palette used on the other side, so a favourite pair sticks.
+/// "Match system" follows the macOS appearance with that same pair.
+@Observable
+final class ThemeStore: @unchecked Sendable {
+  static let shared = ThemeStore()
+
+  private(set) var palette: Palette
+  private(set) var followSystem: Bool
+  private var observer: NSObjectProtocol?
+
+  private init() {
+    let d = UserDefaults.standard
+    followSystem = d.bool(forKey: "themeFollowSystem")
+    palette = Palette.named(d.string(forKey: "theme")) ?? .audiobookshelf
+    if followSystem { palette = Self.systemPick() }
+  }
+
+  var lastDark: Palette { Self.last(dark: true) }
+  var lastLight: Palette { Self.last(dark: false) }
+
+  private static func last(dark: Bool) -> Palette {
+    Palette.named(UserDefaults.standard.string(forKey: dark ? "themeLastDark" : "themeLastLight"))
+      ?? (dark ? .audiobookshelf : Palette.all[1])
+  }
+
+  /// An explicit pick always wins over Match System.
+  @MainActor func select(_ p: Palette) {
+    if followSystem { setFollowSystem(false) }
+    set(p)
+  }
+
+  @MainActor func toggleLightDark() {
+    setFollowSystem(false)
+    set(palette.isDark ? lastLight : lastDark)
+  }
+
+  @MainActor func setFollowSystem(_ on: Bool) {
+    followSystem = on
+    UserDefaults.standard.set(on, forKey: "themeFollowSystem")
+    if on { set(Self.systemPick()) }
+  }
+
+  /// Call once at launch: applies the AppKit side and starts following
+  /// system appearance changes.
+  @MainActor func start() {
+    applyAppKit()
+    observer = DistributedNotificationCenter.default().addObserver(
+      forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self, self.followSystem else { return }
+        self.set(Self.systemPick())
+      }
+    }
+  }
+
+  @MainActor private func set(_ p: Palette) {
+    let d = UserDefaults.standard
+    d.set(p.id, forKey: "theme")
+    d.set(p.id, forKey: p.isDark ? "themeLastDark" : "themeLastLight")
+    guard p != palette else { return }
+    palette = p
+    applyAppKit()
+  }
+
+  /// Native controls (menus, popovers, text fields, scrollers) and the
+  /// window behind the SwiftUI content follow the palette too.
+  @MainActor private func applyAppKit() {
+    NSApp.appearance = NSAppearance(named: palette.isDark ? .darkAqua : .aqua)
+    AppDelegate.shared?.window?.backgroundColor = NSColor(palette.bg)
+  }
+
+  private static var systemIsDark: Bool {
+    UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+  }
+
+  private static func systemPick() -> Palette { last(dark: systemIsDark) }
 }
 
 extension Color {

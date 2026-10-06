@@ -12,13 +12,18 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 
 - Playback keeps going when the window is closed. Media keys, Now Playing and AirPods controls work.
 - Multi-file books play gaplessly, straight from the server.
+- Downloaded books play from disk. If a book finishes downloading while you listen, playback moves to the local copy at the next pause or file boundary, or right away if the stream stalls. You hear no cut.
 - Progress syncs on the web client's schedule, so the web and phone apps pick up where you stopped.
 - Speed presets, a fine step, and quick keys: `S` 2x, `A` 1.5x, `X` 1.2x, `Z` back to 1x.
 - Sleep timer with a gentle fade, including end of chapter.
-- Mini player (`⌘⇧M`): a small floating panel with the book, play/pause, jumps and speed. It stays on top across Spaces and full-screen apps without stealing focus.
+- Mini player (`⌘⇧M`): a small floating panel with the book, play/pause, jumps and speed. It stays on top across Spaces and full-screen apps without stealing focus. Hover it to set how see-through it is when the pointer is away.
 - Keep awake (☕): the Mac stays awake while a book plays. With a one-time permission it keeps playing with the lid closed too, and gives sleep back the moment playback stops, the sleep timer fires, or the battery drops under 20%.
 - Books can be downloaded for offline listening. Offline sessions are uploaded when you're back online.
 - You stay logged in: tokens refresh on their own.
+
+## Themes
+
+The sun/moon button in the top right flips between light and dark (`⌥⌘L`). Right-click it, or open Settings, for every theme: Audiobookshelf (the web client's colours), Light, Space (Tokyo Night), Nord, Catppuccin, Latte and Princess (Rosé Pine Dawn). "Match system appearance" follows macOS light and dark mode.
 
 ## Keys
 
@@ -33,6 +38,7 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 | M | Mute |
 | L | Chapters |
 | ⌘⇧M | Mini player |
+| ⌥⌘L | Light / dark |
 | ⌘1 to ⌘7 | Home, Library, Series, Collections, Playlists, Authors, Narrators |
 
 It's not affiliated with the Audiobookshelf project. Tested against server 2.36.

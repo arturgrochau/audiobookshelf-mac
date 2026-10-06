@@ -53,6 +53,9 @@ struct AppCommands: Commands {
       }
       .keyboardShortcut("-")
       Toggle(L.s("LabelShowSubtitles"), isOn: Bindable(settings).showSubtitles)
+      Menu("Theme") { ThemeMenuItems() }
+      Button("Toggle Light and Dark") { ThemeStore.shared.toggleLightDark() }
+        .keyboardShortcut("l", modifiers: [.command, .option])
       Divider()
     }
     CommandMenu("Controls") {
@@ -105,12 +108,51 @@ struct AppCommands: Commands {
   }
 }
 
+/// Swatch cards for every palette, plus Match System.
+struct ThemePicker: View {
+  var store = ThemeStore.shared
+
+  var body: some View {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+      ForEach(Palette.all) { p in
+        let on = store.palette == p
+        Button {
+          store.select(p)
+        } label: {
+          VStack(spacing: 5) {
+            HStack(spacing: 0) {
+              ForEach(Array(p.swatch.enumerated()), id: \.offset) { _, c in c }
+            }
+            .frame(height: 30)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+              RoundedRectangle(cornerRadius: 6)
+                .stroke(on ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: on ? 2 : 1))
+            Text(p.name).font(.system(size: 11, weight: on ? .semibold : .regular))
+          }
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(p.credit.map { "Colours from \($0)" } ?? p.name)
+      }
+    }
+    Toggle(
+      "Match system appearance",
+      isOn: Binding(get: { store.followSystem }, set: { store.setFollowSystem($0) }))
+    Text("Follows macOS light and dark with the last light and dark theme you picked.")
+      .font(.caption).foregroundStyle(.secondary)
+  }
+}
+
 /// Settings window (phase 4 fills it in).
 struct SettingsView: View {
   var settings = AppSettings.shared
 
   var body: some View {
     Form {
+      Section("Appearance") {
+        ThemePicker()
+      }
       Toggle("Disable auto rewind", isOn: Bindable(settings).disableAutoRewind)
       Toggle("Disable sleep timer fade out", isOn: Bindable(settings).disableSleepTimerFadeOut)
       Toggle(

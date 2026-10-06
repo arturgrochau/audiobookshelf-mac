@@ -81,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     w.setFrameAutosaveName("MainWindow")
     w.tabbingMode = .disallowed
     window = w
+    ThemeStore.shared.start()
     w.makeKeyAndOrderFront(nil)
   }
 
@@ -147,8 +148,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private func installKeyMonitor() {
     keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
       guard let self else { return e }
+      if Self.isMiniPlayerKey(e) {
+        if PlayerModel.shared.hasItem, !e.isARepeat { MiniPlayer.shared.toggle() }
+        return nil
+      }
       return self.handleKey(e) ? nil : e
     }
+  }
+
+  /// ⌘⇧M, taken here before menu matching: a system-wide App Shortcut for
+  /// Window ▸ Zoom on the same keys (a common customisation) would otherwise
+  /// win over the Controls menu and zoom the window instead.
+  private static func isMiniPlayerKey(_ e: NSEvent) -> Bool {
+    e.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command, .shift]
+      && e.charactersIgnoringModifiers?.lowercased() == "m"
   }
 
   private func handleKey(_ e: NSEvent) -> Bool {
@@ -245,6 +258,14 @@ enum URLRoutes {
         p.setSleepTimer(seconds: m * 60)
       }
     case "sleep-cancel": p.cancelSleepTimer()
+    case "mini-player": if p.hasItem { MiniPlayer.shared.toggle() }
+    case "theme":
+      // audiobookshelf://theme?id=nord, ?id=toggle, ?id=system
+      switch v("id") {
+      case "toggle": ThemeStore.shared.toggleLightDark()
+      case "system": ThemeStore.shared.setFollowSystem(true)
+      case let id: if let t = Palette.named(id) { ThemeStore.shared.select(t) }
+      }
     case "close": Task { await p.close() }
     case "open":
       if let id = v("item") {

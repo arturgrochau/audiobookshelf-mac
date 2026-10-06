@@ -25,6 +25,10 @@ final class AudioEngine {
   /// The last file ended: the queue is empty and the position is the book's end.
   private(set) var atEnd = false
   private var lastPosition = 0
+  /// The playing item still reads from the old source after swapSources;
+  /// it moves over at the next moment a change can't be heard.
+  private var staleItem: ObjectIdentifier?
+  private var staleLocalFiles = false
   private var observers: [NSObjectProtocol] = []
   private var statusObservation: NSKeyValueObservation?
   private var timeControlObservation: NSKeyValueObservation?
@@ -71,6 +75,7 @@ final class AudioEngine {
       DispatchQueue.main.async {
         self?.onPlayingChanged?(status == .playing)
         self?.onBufferingChanged?(status == .waitingToPlayAtSpecifiedRate)
+        self?.swapStaleIfQuiet()
       }
     }
   }
@@ -88,6 +93,63 @@ final class AudioEngine {
     if autoplay { play(rate: rate) }
   }
 
+  /// Point the book at another copy of the same files (a download that just
+  /// finished, or the stream again after one was removed) without a cut.
+  /// The queued files switch at once, so the next file boundary is already
+  /// on the new copy. The file playing now switches when nothing can be
+  /// heard: right away while paused, else on the next pause, seek or stall
+  /// (a stall is exactly when the local copy helps), or when it ends.
+  @discardableResult
+  func swapSources(_ new: [TrackSource], localFiles: Bool) -> Bool {
+    guard new.count == tracks.count,
+      zip(new, tracks).allSatisfy({ abs($0.startOffset - $1.startOffset) < 0.5 })
+    else { return false }
+    tracks = new
+    guard !atEnd, let current = player.currentItem, owns(current) else {
+      player.automaticallyWaitsToMinimizeStalling = !localFiles
+      return true
+    }
+    // Paused, or already stalled on the stream: nothing is audible, so
+    // switch now (KVO would not fire again for a stall already underway).
+    if player.timeControlStatus != .playing {
+      let resume = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+      player.automaticallyWaitsToMinimizeStalling = !localFiles
+      rebuildInPlace()
+      if resume { player.play() }
+      return true
+    }
+    staleItem = ObjectIdentifier(current)
+    staleLocalFiles = localFiles
+    // Replace what is queued behind the playing file.
+    for item in player.items() where item !== current {
+      itemPositions[ObjectIdentifier(item)] = nil
+      player.remove(item)
+    }
+    let pos = currentPosition
+    if pos + 1 < tracks.count { player.insert(makeItem(pos + 1), after: current) }
+    return true
+  }
+
+  /// Reads the status now, not the one the KVO change carried: the hop to
+  /// the main queue can land after the player has already moved on.
+  private func swapStaleIfQuiet() {
+    let status = player.timeControlStatus
+    // Only while the stale file itself is current: once the queue has moved
+    // to the next file (already from the new copy), there is nothing to do.
+    guard let stale = staleItem, !atEnd, status != .playing, let cur = player.currentItem,
+      ObjectIdentifier(cur) == stale
+    else { return }
+    let resume = status == .waitingToPlayAtSpecifiedRate
+    player.automaticallyWaitsToMinimizeStalling = !staleLocalFiles
+    rebuildInPlace()
+    if resume { player.play() }
+  }
+
+  private func rebuildInPlace() {
+    let (pos, off) = locate(currentTime)
+    rebuild(position: pos, offset: off)
+  }
+
   func unload() {
     player.pause()
     player.removeAllItems()
@@ -97,6 +159,7 @@ final class AudioEngine {
     pendingSeek = nil
     atEnd = false
     lastPosition = 0
+    staleItem = nil
   }
 
   private func makeItem(_ position: Int) -> AVPlayerItem {
@@ -114,6 +177,7 @@ final class AudioEngine {
     pendingSeek = nil
     statusObservation = nil
     atEnd = false
+    staleItem = nil
     guard tracks.indices.contains(position) else { return }
     lastPosition = position
     let first = makeItem(position)
@@ -152,6 +216,11 @@ final class AudioEngine {
   private func itemEnded(_ item: AVPlayerItem?) {
     guard let item, let pos = itemPositions[ObjectIdentifier(item)] else { return }
     itemPositions[ObjectIdentifier(item)] = nil
+    if staleItem == ObjectIdentifier(item) {
+      // The next file was queued from the new copy: the switch is done.
+      staleItem = nil
+      player.automaticallyWaitsToMinimizeStalling = !staleLocalFiles
+    }
     if pos + 1 >= tracks.count {
       atEnd = true
       onEnded?()
@@ -228,7 +297,7 @@ final class AudioEngine {
     guard !tracks.isEmpty else { return }
     let t = max(0, min(time, duration - 0.05))
     let (pos, off) = locate(t)
-    if !atEnd, pos == currentPosition, let item = player.currentItem {
+    if !atEnd, staleItem == nil, pos == currentPosition, let item = player.currentItem {
       if item.status == .readyToPlay {
         pendingSeek = nil
       } else {

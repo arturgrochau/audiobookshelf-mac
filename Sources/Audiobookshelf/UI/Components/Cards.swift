@@ -166,7 +166,7 @@ struct BookCard: View {
       let d = max(34, 2.6 * em)
       Image(systemName: ebookOnly ? "book.fill" : "play.fill")
         .font(.system(size: d * 0.38, weight: .semibold))
-        .foregroundStyle(Theme.primary)
+        .foregroundStyle(Theme.onLight)
         .offset(x: ebookOnly ? 0 : d * 0.04)
         .frame(width: d, height: d)
         .background(Circle().fill(.white))
@@ -278,7 +278,7 @@ struct AuthorCard: View {
         Text(author.name).font(.system(size: 0.75 * 16 * m, weight: .semibold)).lineLimit(1)
         if let n = author.numBooks {
           Text(n == 1 ? "1 book" : "\(n) books").font(.system(size: 0.65 * 16 * m))
-            .foregroundStyle(Theme.gray200)
+            .foregroundStyle(.white.opacity(0.75))
         }
       }
       .foregroundStyle(.white)

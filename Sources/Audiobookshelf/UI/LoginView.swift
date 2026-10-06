@@ -27,7 +27,7 @@ struct LoginView: View {
       .padding(.top, 12)
       VStack(spacing: 0) {
         Text(L.s("HeaderLogin")).font(Theme.sans(24, .semibold)).frame(maxWidth: .infinity)
-        Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1).padding(.vertical, 16)
+        Rectangle().fill(Theme.ink.opacity(0.1)).frame(height: 1).padding(.vertical, 16)
         if let error {
           Text(error).font(Theme.sans(16)).foregroundStyle(Theme.error)
             .multilineTextAlignment(.center).padding(.vertical, 8)
@@ -47,7 +47,7 @@ struct LoginView: View {
       .padding(16)
       .background(Theme.bg)
       .clipShape(RoundedRectangle(cornerRadius: 6))
-      .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.05)))
+      .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.ink.opacity(0.05)))
       .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
       .frame(width: 400)
       .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -55,7 +55,7 @@ struct ItemPage: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
       if pct > 0 {
-        Capsule().fill(Color.white.opacity(0.1))
+        Capsule().fill(Theme.ink.opacity(0.1))
           .overlay(alignment: .leading) {
             Capsule().fill(finished ? Theme.success : Theme.accent).frame(width: 208 * pct)
           }
@@ -280,7 +280,7 @@ private struct CoverWithPlay: View {
           Task { await PlayerModel.shared.play(item.id) }
         } label: {
           Image(systemName: "play.fill").font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(Theme.primary)
+            .foregroundStyle(Theme.onLight)
             .offset(x: 2)
             .frame(width: 56, height: 56)
             .background(Circle().fill(.white))
@@ -307,12 +307,12 @@ private struct Badge: View {
 struct LinkText: View {
   let text: String
   var size: CGFloat = 16
-  var color: Color = .white
+  var color: Color?
   let action: () -> Void
   @State private var hover = false
 
   var body: some View {
-    Text(text).font(.system(size: size)).foregroundStyle(color).underline(hover)
+    Text(text).font(.system(size: size)).foregroundStyle(color ?? Theme.ink).underline(hover)
       .onHover { hover = $0 }
       .linkCursor()
       .onTapGesture(perform: action)
@@ -443,7 +443,7 @@ struct TableHeader: View {
         .foregroundStyle(Theme.gray400)
         .frame(width: 12)
       Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(
-        hover ? .white : Theme.gray200)
+        hover ? Theme.ink : Theme.gray200)
       Text("\(count)").font(.system(size: 12)).foregroundStyle(Theme.gray500)
       Spacer()
     }
@@ -478,7 +478,7 @@ struct ListRow<Content: View>: View {
       .frame(height: 28)
       .background(
         RoundedRectangle(cornerRadius: 5).fill(
-          Color.white.opacity(hover && action != nil ? 0.06 : 0))
+          Theme.ink.opacity(hover && action != nil ? 0.06 : 0))
       )
       .contentShape(Rectangle())
       .onHover { hover = $0 }
@@ -501,14 +501,14 @@ struct PillButton: View {
         if let symbol { Image(systemName: symbol).font(.system(size: 11, weight: .bold)) }
         Text(title).font(.system(size: 13, weight: .semibold))
       }
-      .foregroundStyle(prominent ? Theme.primary : .white)
+      .foregroundStyle(prominent ? Theme.primary : Theme.ink)
       .padding(.horizontal, 16)
       .frame(height: 30)
       .background(
         Capsule().fill(
           prominent
-            ? Color.white.opacity(disabled ? 0.55 : hover ? 0.9 : 1)
-            : Color.white.opacity(hover ? 0.14 : 0.08))
+            ? Theme.ink.opacity(disabled ? 0.55 : hover ? 0.9 : 1)
+            : Theme.ink.opacity(hover ? 0.14 : 0.08))
       )
       .contentShape(Capsule())
     }

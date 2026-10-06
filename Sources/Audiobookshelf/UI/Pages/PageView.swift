@@ -139,13 +139,13 @@ struct ItemSlider<Content: View>: View {
     return Button(action: action) {
       Image(systemName: icon == "chevron_left" ? "chevron.left" : "chevron.right")
         .font(.system(size: 0.8 * em, weight: .semibold))
-        .foregroundStyle(enabled ? Theme.gray300 : Color.white.opacity(0.4))
+        .foregroundStyle(enabled ? Theme.gray300 : Theme.ink.opacity(0.4))
         .frame(width: 2 * em, height: 2 * em)
         .contentShape(Circle())
     }
     .buttonStyle(.plain)
     .disabled(!enabled)
-    .background(Circle().fill(Color.clear)).hoverHighlight(.white.opacity(0.05)).clipShape(Circle())
+    .background(Circle().fill(Color.clear)).hoverHighlight(Theme.ink.opacity(0.05)).clipShape(Circle())
     .padding(.horizontal, 0.25 * em)
   }
 }
@@ -285,7 +285,7 @@ struct LibraryToolbar: View {
     .padding(.horizontal, 16)
     .frame(height: Theme.toolbarHeight)
     .background(Theme.bg)
-    .overlay(alignment: .bottom) { Rectangle().fill(Color.black.opacity(0.3)).frame(height: 1) }
+    .overlay(alignment: .bottom) { Rectangle().fill(Color.black.opacity(Theme.isDark ? 0.3 : 0.08)).frame(height: 1) }
   }
 
   static func describe(_ filter: String) -> String {
@@ -405,7 +405,7 @@ struct AuthorPage: View {
                 }
               } else {
                 Image(systemName: "person.fill").font(.system(size: 80))
-                  .foregroundStyle(.white.opacity(0.6))
+                  .foregroundStyle(Theme.ink.opacity(0.6))
               }
             }
             .frame(width: 192, height: 240)

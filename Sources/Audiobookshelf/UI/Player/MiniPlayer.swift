@@ -23,6 +23,22 @@ final class MiniPlayer {
 
   func hide() { panel?.orderOut(nil) }
 
+  static let opacityKey = "miniPlayerOpacity"
+  static let opacities: [Double] = [1, 0.85, 0.7, 0.55, 0.4]
+
+  /// The chosen see-through level applies while the pointer is elsewhere;
+  /// hovering brings the panel back to full so it stays easy to use.
+  func applyOpacity(hovering: Bool) {
+    guard let panel else { return }
+    let stored = UserDefaults.standard.object(forKey: Self.opacityKey) as? Double ?? 1
+    let target = hovering ? 1 : min(1, max(0.2, stored))
+    guard abs(panel.alphaValue - target) > 0.001 else { return }
+    NSAnimationContext.runAnimationGroup { ctx in
+      ctx.duration = 0.18
+      panel.animator().alphaValue = target
+    }
+  }
+
   private func makePanel() -> NSPanel {
     let p = NSPanel(
       contentRect: NSRect(x: 0, y: 0, width: 340, height: 84),
@@ -49,6 +65,7 @@ final class MiniPlayer {
       p.setFrameOrigin(NSPoint(x: v.maxX - 360, y: v.maxY - 104))
     }
     p.setFrameAutosaveName("MiniPlayer")
+    p.alphaValue = min(1, max(0.2, UserDefaults.standard.object(forKey: Self.opacityKey) as? Double ?? 1))
     return p
   }
 }
@@ -57,6 +74,7 @@ struct MiniPlayerView: View {
   @Bindable var player = PlayerModel.shared
   var settings = AppSettings.shared
   @State private var hover = false
+  @AppStorage(MiniPlayer.opacityKey) private var opacity = 1.0
 
   var body: some View {
     VStack(spacing: 0) {
@@ -68,10 +86,10 @@ struct MiniPlayerView: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(player.displayTitle)
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.ink)
           Text(player.displayAuthor)
             .font(.system(size: 11))
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(Theme.ink.opacity(0.6))
         }
         .lineLimit(1)
         Spacer(minLength: 4)
@@ -88,7 +106,7 @@ struct MiniPlayerView: View {
             .foregroundStyle(Theme.primary)
             .offset(x: player.isPlaying ? 0 : 1)
             .frame(width: 32, height: 32)
-            .background(Circle().fill(.white))
+            .background(Circle().fill(Theme.ink))
             .contentShape(Circle())
         }
         .buttonStyle(PressScale())
@@ -103,25 +121,51 @@ struct MiniPlayerView: View {
     }
     .frame(width: 340, height: 84)
     .background(.ultraThinMaterial)
-    .background(Color.black.opacity(0.35))
+    .background(Theme.primary.opacity(0.55))
     .clipShape(RoundedRectangle(cornerRadius: 14))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1)))
+    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.ink.opacity(0.1)))
     .overlay(alignment: .topTrailing) {
       if hover {
-        Button {
-          MiniPlayer.shared.hide()
-        } label: {
-          Image(systemName: "xmark.circle.fill")
-            .font(.system(size: 12))
-            .foregroundStyle(.white.opacity(0.6))
+        HStack(spacing: 4) {
+          opacityMenu
+          Button {
+            MiniPlayer.shared.hide()
+          } label: {
+            Image(systemName: "xmark.circle.fill")
+              .font(.system(size: 12))
+              .foregroundStyle(Theme.ink.opacity(0.6))
+          }
+          .buttonStyle(.plain)
+          .help("Close mini player")
         }
-        .buttonStyle(.plain)
-        .help("Close mini player")
         .padding(6)
       }
     }
-    .onHover { hover = $0 }
-    .environment(\.colorScheme, .dark)
+    .onHover {
+      hover = $0
+      MiniPlayer.shared.applyOpacity(hovering: $0)
+    }
+    .onChange(of: opacity) { MiniPlayer.shared.applyOpacity(hovering: hover) }
+    .environment(\.colorScheme, Theme.scheme)
+  }
+
+  private var opacityMenu: some View {
+    Menu {
+      ForEach(MiniPlayer.opacities, id: \.self) { o in
+        Toggle(
+          "\(Int((o * 100).rounded()))%",
+          isOn: Binding(get: { abs(opacity - o) < 0.001 }, set: { _ in opacity = o }))
+      }
+    } label: {
+      Image(systemName: "circle.lefthalf.filled")
+        .font(.system(size: 11))
+        .foregroundStyle(Theme.ink.opacity(0.6))
+    }
+    .menuStyle(.button)
+    .buttonStyle(.plain)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .help("Opacity when the pointer is away")
   }
 
   private var progress: some View {
@@ -129,8 +173,8 @@ struct MiniPlayerView: View {
       GeometryReader { geo in
         let frac = player.duration > 0 ? player.liveTime / player.duration : 0
         ZStack(alignment: .leading) {
-          Rectangle().fill(Color.white.opacity(0.12))
-          Rectangle().fill(Color.white.opacity(0.85))
+          Rectangle().fill(Theme.ink.opacity(0.12))
+          Rectangle().fill(Theme.ink.opacity(0.85))
             .frame(width: geo.size.width * CGFloat(max(0, min(1, frac))))
         }
       }
@@ -165,12 +209,12 @@ private struct MiniSpeed: View {
       Text(Format.rate(player.rate))
         .font(.system(size: 11, weight: .semibold).monospacedDigit())
         .foregroundStyle(
-          abs(player.rate - 1) < 0.001 ? .white.opacity(hover ? 0.9 : 0.6) : Theme.accent
+          abs(player.rate - 1) < 0.001 ? Theme.ink.opacity(hover ? 0.9 : 0.6) : Theme.accent
         )
         .padding(.horizontal, 7)
         .frame(minWidth: 38)
         .frame(height: 22)
-        .background(Capsule().stroke(Color.white.opacity(hover ? 0.3 : 0.15)))
+        .background(Capsule().stroke(Theme.ink.opacity(hover ? 0.3 : 0.15)))
         .contentShape(Capsule())
     }
     .menuStyle(.button)

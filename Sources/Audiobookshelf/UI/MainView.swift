@@ -13,8 +13,10 @@ struct RootView: View {
         LoginView()
       }
     }
-    .environment(\.colorScheme, .dark)
-    .preferredColorScheme(.dark)
+    .foregroundStyle(Theme.ink)
+    .tint(Theme.accent)
+    .environment(\.colorScheme, Theme.scheme)
+    .preferredColorScheme(Theme.scheme)
     .task(id: app.isLoggedIn) { AppDelegate.shared?.startServicesIfNeeded() }
     .tint(Theme.accent)
   }
@@ -78,12 +80,14 @@ struct AppBar: View {
       Spacer(minLength: 16)
       GlobalSearch()
       Spacer(minLength: 16)
+      ThemeToggle()
+        .padding(.trailing, 2)
       AccountButton()
         .padding(.trailing, 14)
     }
     .frame(height: Theme.appBarHeight)
     .background(Theme.primary)
-    .overlay(alignment: .bottom) { Color.white.opacity(0.06).frame(height: 1) }
+    .overlay(alignment: .bottom) { Theme.ink.opacity(0.06).frame(height: 1) }
     .gesture(WindowDragGesture())
     .allowsWindowActivationEvents(true)
   }
@@ -128,10 +132,10 @@ struct LibraryPicker: View {
         Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
           .foregroundStyle(Theme.gray400)
       }
-      .foregroundStyle(hover ? .white : Theme.gray200)
+      .foregroundStyle(hover ? Theme.ink : Theme.gray200)
       .padding(.horizontal, 9)
       .frame(height: 28)
-      .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(hover ? 0.08 : 0)))
+      .background(RoundedRectangle(cornerRadius: 6).fill(Theme.ink.opacity(hover ? 0.08 : 0)))
       .contentShape(Rectangle())
     }
     .menuStyle(.button)
@@ -140,6 +144,50 @@ struct LibraryPicker: View {
     .fixedSize()
     .onHover { hover = $0 }
     .help("Switch library")
+  }
+}
+
+/// Sun or moon: flips between the last light and last dark theme used.
+/// Right-click lists every theme.
+struct ThemeToggle: View {
+  var store = ThemeStore.shared
+  @State private var hover = false
+
+  var body: some View {
+    Button {
+      withAnimation(.easeInOut(duration: 0.2)) { store.toggleLightDark() }
+    } label: {
+      Image(systemName: store.palette.isDark ? "moon.fill" : "sun.max.fill")
+        .font(.system(size: 15, weight: .regular))
+        .foregroundStyle(hover ? Theme.ink : Theme.gray300)
+        .contentTransition(.symbolEffect(.replace))
+        .frame(width: 32, height: 32)
+        .background(Circle().fill(Theme.ink.opacity(hover ? 0.08 : 0)))
+        .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+    .onHover { hover = $0 }
+    .contextMenu { ThemeMenuItems() }
+    .help(store.palette.isDark ? "Switch to \(store.lastLight.name)" : "Switch to \(store.lastDark.name)")
+  }
+}
+
+/// The theme list for menus: the toolbar toggle, the account menu, View.
+struct ThemeMenuItems: View {
+  var store = ThemeStore.shared
+
+  var body: some View {
+    ForEach(Palette.all) { p in
+      Toggle(
+        p.name,
+        isOn: Binding(
+          get: { !store.followSystem && store.palette == p },
+          set: { _ in store.select(p) }))
+    }
+    Divider()
+    Toggle(
+      "Match System Appearance",
+      isOn: Binding(get: { store.followSystem }, set: { store.setFollowSystem($0) }))
   }
 }
 
@@ -160,14 +208,15 @@ struct AccountButton: View {
         }
       }
       Button("Open in Browser") { if let u = app.webURL { NSWorkspace.shared.open(u) } }
+      Menu("Theme") { ThemeMenuItems() }
       Divider()
       Button("Log Out") { Task { await app.logout() } }
     } label: {
       Image(systemName: "person.crop.circle")
         .font(.system(size: 18, weight: .regular))
-        .foregroundStyle(hover ? .white : Theme.gray300)
+        .foregroundStyle(hover ? Theme.ink : Theme.gray300)
         .frame(width: 32, height: 32)
-        .background(Circle().fill(Color.white.opacity(hover ? 0.08 : 0)))
+        .background(Circle().fill(Theme.ink.opacity(hover ? 0.08 : 0)))
         .contentShape(Circle())
     }
     .menuStyle(.button)
@@ -233,7 +282,7 @@ struct SideRail: View {
     .padding(.top, 10)
     .frame(width: Theme.railWidth)
     .background(Theme.primary)
-    .overlay(alignment: .trailing) { Color.white.opacity(0.06).frame(width: 1) }
+    .overlay(alignment: .trailing) { Theme.ink.opacity(0.06).frame(width: 1) }
   }
 
   func isActive(_ r: Route) -> Bool {
@@ -267,11 +316,11 @@ private struct RailButton: View {
         Text(entry.label).font(.system(size: 10, weight: .medium)).lineLimit(1)
           .minimumScaleFactor(0.8)
       }
-      .foregroundStyle(active ? Theme.accent : hover ? .white : Theme.gray400)
+      .foregroundStyle(active ? Theme.accent : hover ? Theme.ink : Theme.gray400)
       .frame(width: Theme.railWidth - 12, height: 54)
       .background(
         RoundedRectangle(cornerRadius: 8)
-          .fill(active ? Theme.accent.opacity(0.12) : Color.white.opacity(hover ? 0.06 : 0))
+          .fill(active ? Theme.accent.opacity(0.12) : Theme.ink.opacity(hover ? 0.06 : 0))
       )
       .contentShape(Rectangle())
     }
@@ -320,10 +369,10 @@ struct GlobalSearch: View {
     }
     .padding(.horizontal, 10)
     .frame(width: 320, height: 28)
-    .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(focused ? 0.1 : 0.06)))
+    .background(RoundedRectangle(cornerRadius: 7).fill(Theme.ink.opacity(focused ? 0.1 : 0.06)))
     .overlay(
       RoundedRectangle(cornerRadius: 7).stroke(
-        focused ? Theme.accent.opacity(0.6) : Color.white.opacity(0.08)))
+        focused ? Theme.accent.opacity(0.6) : Theme.ink.opacity(0.08)))
     // An in-window overlay, not a popover: a popover is its own window and
     // takes the keystrokes that follow while typing.
     .overlay(alignment: .topLeading) {
@@ -466,7 +515,7 @@ struct SearchSuggestions: View {
       action()
       dismiss()
     } label: {
-      content().foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading).padding(
+      content().foregroundStyle(Theme.ink).frame(maxWidth: .infinity, alignment: .leading).padding(
         .horizontal, 12
       )
       .padding(.vertical, 5).contentShape(Rectangle())

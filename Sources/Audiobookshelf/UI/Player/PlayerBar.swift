@@ -30,7 +30,7 @@ struct PlayerBar: View {
     .frame(height: Theme.playerHeight)
     .frame(maxWidth: .infinity)
     .background(Theme.primary)
-    .overlay(alignment: .top) { Color.white.opacity(0.06).frame(height: 1) }
+    .overlay(alignment: .top) { Theme.ink.opacity(0.06).frame(height: 1) }
   }
 
   private var aspect: Double { app.currentLibrary?.coverAspect ?? 1 }
@@ -44,7 +44,7 @@ struct PlayerBar: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(player.displayTitle.isEmpty ? "No Title" : player.displayTitle)
           .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(.white)
+          .foregroundStyle(Theme.ink)
           .onTapGesture { if let id = player.item?.id { app.go(.item(id)) } }
           .linkCursor()
         Text(byline)
@@ -83,10 +83,10 @@ struct SymbolButton: View {
       Image(systemName: symbol)
         .font(.system(size: size, weight: weight))
         .foregroundStyle(
-          disabled ? Theme.gray600 : active ? Theme.accent : hover ? .white : Theme.gray300
+          disabled ? Theme.gray600 : active ? Theme.accent : hover ? Theme.ink : Theme.gray300
         )
         .frame(width: size + 16, height: size + 16)
-        .background(Circle().fill(Color.white.opacity(hover && !disabled ? 0.08 : 0)))
+        .background(Circle().fill(Theme.ink.opacity(hover && !disabled ? 0.08 : 0)))
         .contentShape(Circle())
     }
     .buttonStyle(.plain)
@@ -129,7 +129,7 @@ struct TransportControls: View {
       player.playPause()
     } label: {
       ZStack {
-        Circle().fill(.white)
+        Circle().fill(Theme.ink)
         if player.isLoading {
           ProgressView().controlSize(.small).tint(Theme.primary)
         } else {
@@ -289,12 +289,12 @@ struct TrackBar: View {
           max(0, min(1, (player.engine.bufferedUntil - span.base) / span.length)))
         let thick: CGFloat = hoverX == nil ? 4 : 6
         ZStack(alignment: .leading) {
-          Capsule().fill(Color.white.opacity(0.12))
-          Capsule().fill(Color.white.opacity(0.18)).frame(width: w * buffered)
-          Capsule().fill(Color.white.opacity(0.9)).frame(width: max(thick, w * played))
+          Capsule().fill(Theme.ink.opacity(0.12))
+          Capsule().fill(Theme.ink.opacity(0.18)).frame(width: w * buffered)
+          Capsule().fill(Theme.ink.opacity(0.9)).frame(width: max(thick, w * played))
           ticks(width: w)
           if hoverX != nil {
-            Circle().fill(.white).frame(width: 11, height: 11)
+            Circle().fill(Theme.ink).frame(width: 11, height: 11)
               .offset(x: w * played - 5.5)
               .shadow(color: .black.opacity(0.3), radius: 2)
           }
@@ -368,12 +368,12 @@ struct SpeedControl: View {
       Text(Format.rate(player.rate))
         .font(.system(size: 12, weight: .semibold).monospacedDigit())
         .foregroundStyle(
-          abs(player.rate - 1) < 0.001 ? (hover ? .white : Theme.gray300) : Theme.accent
+          abs(player.rate - 1) < 0.001 ? (hover ? Theme.ink : Theme.gray300) : Theme.accent
         )
         .padding(.horizontal, 8)
         .frame(minWidth: 44)
         .frame(height: 24)
-        .background(Capsule().stroke(Color.white.opacity(hover ? 0.3 : 0.15)))
+        .background(Capsule().stroke(Theme.ink.opacity(hover ? 0.3 : 0.15)))
         .contentShape(Capsule())
     }
     .buttonStyle(.plain)
@@ -389,10 +389,10 @@ struct SpeedControl: View {
             } label: {
               Text(Format.rate(r))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(on ? Theme.primary : .white)
+                .foregroundStyle(on ? Theme.primary : Theme.ink)
                 .frame(width: 44, height: 26)
                 .background(
-                  RoundedRectangle(cornerRadius: 6).fill(on ? .white : Color.white.opacity(0.08)))
+                  RoundedRectangle(cornerRadius: 6).fill(on ? Theme.ink : Theme.ink.opacity(0.08)))
             }
             .buttonStyle(.plain)
           }
@@ -404,7 +404,7 @@ struct SpeedControl: View {
           Spacer()
           Text(Format.rate(player.rate))
             .font(.system(size: 22, weight: .semibold).monospacedDigit())
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.ink)
           Spacer()
           SymbolButton(symbol: "plus", size: 12, help: "Faster") {
             player.setRate(player.rate + settings.playbackRateIncrementDecrement)
@@ -413,7 +413,7 @@ struct SpeedControl: View {
       }
       .padding(12)
       .frame(width: 252)
-      .environment(\.colorScheme, .dark)
+      .environment(\.colorScheme, Theme.scheme)
     }
   }
 }
@@ -426,11 +426,11 @@ struct SpeedFlash: View {
     if let flash = player.speedFlash {
       Text(Format.rate(flash.rate))
         .font(.system(size: 30, weight: .semibold).monospacedDigit())
-        .foregroundStyle(.white)
+        .foregroundStyle(Theme.ink)
         .padding(.horizontal, 22)
         .padding(.vertical, 12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .environment(\.colorScheme, .dark)
+        .environment(\.colorScheme, Theme.scheme)
         .id(flash.id)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
         .allowsHitTesting(false)

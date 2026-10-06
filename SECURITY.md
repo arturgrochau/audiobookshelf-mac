@@ -21,4 +21,4 @@ Useful context when you're looking for problems:
 - **Tokens:** the access and refresh tokens are stored in `~/Library/Application Support/Audiobookshelf/account.json` with mode `0600`.
 - **Password:** kept in your login Keychain, used only to log back in silently when the refresh token has expired.
 - **Lid-closed playback (optional):** after you agree to it and enter your admin password, the app installs `/etc/sudoers.d/audiobookshelf-lid`. That rule allows exactly `pmset -a disablesleep 0` and `pmset -a disablesleep 1`, nothing else. The rule is written and validated with `visudo` inside the privileged shell. Delete the file to remove it.
-- **URL scheme:** `audiobookshelf://` accepts playback and navigation commands (play, pause, speed, seek, open a page). Test hooks that start or delete downloads are off unless you enable `debugURLRoutes` in the app's defaults.
+- **URL scheme:** `audiobookshelf://` accepts playback, navigation and appearance commands (play, pause, speed, seek, open a page, mini player, theme). Test hooks that start or delete downloads are off unless you enable `debugURLRoutes` in the app's defaults.

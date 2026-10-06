@@ -3,7 +3,7 @@ import SwiftUI
 
 /// `ui-btn`: rounded-md, gray-600 border, shadow, white/10 overlay on hover.
 struct WebButton<Label: View>: View {
-  var color: Color = Theme.primary
+  var color: Color?
   var small = false
   var disabled = false
   var paddingX: CGFloat?
@@ -16,11 +16,11 @@ struct WebButton<Label: View>: View {
     Button(action: action) {
       label()
         .font(Theme.sans(small ? 14 : 16))
-        .foregroundStyle(.white)
+        .foregroundStyle(Theme.ink(on: color ?? Theme.primary))
         .padding(.horizontal, paddingX ?? (small ? 16 : 32))
         .padding(.vertical, paddingY ?? (small ? 4 : 8))
-        .background(color)
-        .overlay(hover && !disabled ? Color.white.opacity(0.1) : .clear)
+        .background(color ?? Theme.primary)
+        .overlay(hover && !disabled ? Theme.ink.opacity(0.1) : .clear)
         .overlay(disabled ? Color.black.opacity(0.2) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.gray600, lineWidth: 1))
@@ -34,7 +34,7 @@ struct WebButton<Label: View>: View {
 
 extension WebButton where Label == Text {
   init(
-    _ title: String, color: Color = Theme.primary, small: Bool = false, disabled: Bool = false,
+    _ title: String, color: Color? = nil, small: Bool = false, disabled: Bool = false,
     action: @escaping () -> Void
   ) {
     self.init(color: color, small: small, disabled: disabled, action: action) { Text(title) }
@@ -46,7 +46,7 @@ struct IconButton: View {
   let icon: String
   var size: CGFloat = 36
   var iconSize: CGFloat = 20
-  var bg: Color = Theme.primary
+  var bg: Color?
   var disabled = false
   let action: () -> Void
   @State private var hover = false
@@ -54,10 +54,10 @@ struct IconButton: View {
   var body: some View {
     Button(action: action) {
       Icon(icon, size: iconSize)
-        .foregroundStyle(.white)
+        .foregroundStyle(Theme.ink(on: bg ?? Theme.primary))
         .frame(width: size, height: size)
-        .background(bg)
-        .overlay(hover && !disabled ? Color.white.opacity(0.1) : .clear)
+        .background(bg ?? Theme.primary)
+        .overlay(hover && !disabled ? Theme.ink.opacity(0.1) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.gray600, lineWidth: 1))
     }
@@ -73,8 +73,8 @@ struct HoverIcon: View {
   let icon: String
   var size: CGFloat = 24
   var filled = false
-  var color: Color = Theme.gray300
-  var hoverColor: Color = .white
+  var color: Color?
+  var hoverColor: Color?
   var disabled = false
   let action: () -> Void
   @State private var hover = false
@@ -82,7 +82,8 @@ struct HoverIcon: View {
   var body: some View {
     Button(action: action) {
       Icon(icon, size: size, filled: filled)
-        .foregroundStyle(disabled ? Theme.gray500 : (hover ? hoverColor : color))
+        .foregroundStyle(
+          disabled ? Theme.gray500 : (hover ? hoverColor ?? Theme.ink : color ?? Theme.gray300))
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -106,7 +107,7 @@ struct WebModal<Content: View>: View {
         .onTapGesture { isPresented = false }
       VStack(spacing: 0) {
         HStack {
-          Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+          Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.ink)
             .lineLimit(1)
           Spacer()
           SymbolButton(symbol: "xmark", size: 11, weight: .bold, help: "Close") {
@@ -122,9 +123,9 @@ struct WebModal<Content: View>: View {
       .frame(minWidth: 380)
       .background(RoundedRectangle(cornerRadius: 14).fill(Theme.primary))
       .clipShape(RoundedRectangle(cornerRadius: 14))
-      .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.08)))
+      .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.ink.opacity(0.08)))
       .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
-      .environment(\.colorScheme, .dark)
+      .environment(\.colorScheme, Theme.scheme)
     }
     .onExitCommand { isPresented = false }
     .transition(.opacity)
@@ -140,8 +141,8 @@ struct ToastStack: View {
       ForEach(toasts) { t in
         HStack(spacing: 10) {
           Image(systemName: icon(t.kind)).font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(.white)
-          Text(t.text).font(Theme.sans(15)).foregroundStyle(.white).fixedSize(
+            .foregroundStyle(Theme.ink(on: color(t.kind)))
+          Text(t.text).font(Theme.sans(15)).foregroundStyle(Theme.ink(on: color(t.kind))).fixedSize(
             horizontal: false, vertical: true)
         }
         .padding(.horizontal, 16)
@@ -179,15 +180,15 @@ struct ToastStack: View {
 
 /// Tailwind-ish hover highlight for rows.
 struct HoverHighlight: ViewModifier {
-  var color: Color = Theme.primary.opacity(0.3)
+  var color: Color?
   @State private var hover = false
   func body(content: Content) -> some View {
-    content.background(hover ? color : .clear).onHover { hover = $0 }
+    content.background(hover ? color ?? Theme.primary.opacity(0.3) : .clear).onHover { hover = $0 }
   }
 }
 
 extension View {
-  func hoverHighlight(_ c: Color = Theme.primary.opacity(0.3)) -> some View {
+  func hoverHighlight(_ c: Color? = nil) -> some View {
     modifier(HoverHighlight(color: c))
   }
 

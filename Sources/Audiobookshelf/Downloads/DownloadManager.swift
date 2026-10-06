@@ -228,6 +228,7 @@ final class DownloadManager: NSObject {
     states[itemId] = nil
     revision += 1
     saveIndex()
+    PlayerModel.shared.downloadChanged(itemId)
   }
 
   func showInFinder(_ itemId: String) {
@@ -364,6 +365,7 @@ final class DownloadManager: NSObject {
     states[itemId] = .done
     revision += 1
     saveIndex()
+    PlayerModel.shared.downloadChanged(itemId)
     if AppSettings.shared.notifyDownloads {
       Notifier.shared.post(title: "Download complete", body: rec.title)
     }
