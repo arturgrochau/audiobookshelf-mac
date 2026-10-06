@@ -40,9 +40,9 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 
 ## Themes
 
-The sun/moon button in the top right flips between light and dark (`⌥⌘L`). Right-click it, or open Settings, for every theme: Audiobookshelf (the web client's colours), Light, Space (Tokyo Night), Nord, Catppuccin, Latte and Princess (Rosé Pine Dawn). "Match system appearance" follows macOS light and dark mode.
+The sun/moon button in the top right flips between light and dark (`⌥⌘L`). Right-click it, or open Settings, for every theme: Audiobookshelf (the web client's colours), Light, Space (near-black with a purple glow), Nord, Catppuccin, Latte (Catppuccin's light flavour) and Princess (soft pink). "Match system appearance" follows macOS light and dark mode.
 
-![Audiobookshelf, Light, Space and Princess themes](docs/themes.jpg)
+![All seven themes: Audiobookshelf, Light, Space, Nord, Catppuccin, Latte and Princess](docs/themes.jpg)
 
 ## Keys
 

@@ -2,11 +2,17 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Space, Latte and Princess look clearly different from the other themes. Space is near-black with a purple glow and cyan accents, Latte is a cool lavender-grey, and Princess is a soft pink with plum text and a rose accent.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added
 
-- Themes. A sun/moon button in the top right (or `⌥⌘L`) flips between light and dark. Right-click it, use View ▸ Theme, or open Settings to pick one of seven: Audiobookshelf, Light, Space (Tokyo Night), Nord, Catppuccin, Latte and Princess (Rosé Pine Dawn). Every surface, accent and native control follows the theme. "Match system appearance" follows macOS light and dark mode.
+- Themes. A sun/moon button in the top right (or `⌥⌘L`) flips between light and dark. Right-click it, use View ▸ Theme, or open Settings to pick one of seven: Audiobookshelf, Light, Space (Tokyo Night), Nord, Catppuccin, Latte and Princess. Every surface, accent and native control follows the theme. "Match system appearance" follows macOS light and dark mode.
 - Mini player (`⌘⇧M`): a small floating panel with the cover, play/pause, jumps and a speed menu. It stays on top across Spaces and full-screen apps without taking focus. Hover it to set its opacity for when the pointer is away.
 - Speed keys: `S` 2x, `A` 1.5x, `X` 1.2x, `Z` 1x. They match by character, so they work on any keyboard layout.
 - Keep awake (☕). The Mac stays awake while a book plays. An optional lid-closed mode installs one sudoers rule that allows only `pmset -a disablesleep 0|1`. Sleep comes back on pause, when the sleep timer fires, on quit, below 20% battery, or after a crash.
@@ -40,5 +46,6 @@ First version: a native SwiftUI and AVFoundation client for Audiobookshelf 2.36 
 - Offline downloads, with offline sessions uploaded once you're back online.
 - Persistent login: tokens refresh on their own, and only a rejected password logs you out.
 
+[Unreleased]: https://github.com/arturgrochau/audiobookshelf-mac/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/arturgrochau/audiobookshelf-mac/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/arturgrochau/audiobookshelf-mac/releases/tag/v0.1.0
