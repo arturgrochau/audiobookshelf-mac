@@ -242,7 +242,9 @@ struct LibraryToolbar: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      Text("\(count) \(L.s("LabelBooks"))").font(Theme.sans(15)).foregroundStyle(Theme.gray200)
+      Text("\(count) \(L.s("LabelBooks"))")
+        .font(Theme.sans(15, Theme.modern ? .semibold : .regular))
+        .foregroundStyle(Theme.modern ? Theme.ink : Theme.gray200)
       if let filter, filter != "all" {
         Button {
           app.go(.library)
@@ -254,7 +256,7 @@ struct LibraryToolbar: View {
           .font(Theme.sans(13))
           .padding(.horizontal, 8)
           .padding(.vertical, 2)
-          .background(Theme.primary)
+          .background(Theme.modern ? Theme.accent.opacity(0.18) : Theme.primary)
           .clipShape(RoundedRectangle(cornerRadius: 999))
         }
         .buttonStyle(.plain)
@@ -287,8 +289,18 @@ struct LibraryToolbar: View {
     }
     .padding(.horizontal, 16)
     .frame(height: Theme.toolbarHeight)
-    .background(Theme.bg)
-    .overlay(alignment: .bottom) { Rectangle().fill(Color.black.opacity(Theme.isDark ? 0.3 : 0.08)).frame(height: 1) }
+    .background {
+      if Theme.modern {
+        Color.clear.glass(Theme.primary.opacity(0.5))
+      } else {
+        Theme.bg
+      }
+    }
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(Theme.modern ? Theme.ink.opacity(0.06) : Color.black.opacity(Theme.isDark ? 0.3 : 0.08))
+        .frame(height: 1)
+    }
   }
 
   static func describe(_ filter: String) -> String {
