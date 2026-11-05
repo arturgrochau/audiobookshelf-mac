@@ -30,7 +30,7 @@ struct MainView: View {
     VStack(spacing: 0) {
       AppBar().zIndex(2)
       HStack(spacing: 0) {
-        SideRail()
+        SideRail().zIndex(1)
         PageView(route: app.route)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }

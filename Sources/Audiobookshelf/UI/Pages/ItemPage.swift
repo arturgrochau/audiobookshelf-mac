@@ -56,6 +56,8 @@ struct ItemPage: View {
           Theme.bg.opacity(0.35)
         }
       }
+      .clipped()
+      .allowsHitTesting(false)
     }
     .task(id: itemId) { _ = await store.expandedItem(itemId) }
   }
@@ -291,7 +293,7 @@ private struct CoverWithPlay: View {
   var body: some View {
     ZStack {
       BookCover(item: item, width: 208, aspect: aspect, pixelWidth: 416)
-        .brightness(hover ? -0.25 : 0)
+        .overlay(Color.black.opacity(hover ? 0.25 : 0))
       if hover && canPlay {
         Button {
           Task { await PlayerModel.shared.play(item.id) }
