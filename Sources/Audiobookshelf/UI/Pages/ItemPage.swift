@@ -39,7 +39,24 @@ struct ItemPage: View {
         .padding(32)
       }
     }
-    .background(Theme.bg)
+    .background {
+      ZStack {
+        Theme.bg
+        if let item {
+          GeometryReader { geo in
+            let aspect = app.currentLibrary?.coverAspect ?? 1
+            let fill = max(geo.size.width / 400, geo.size.height / (400 * aspect)) * 1.15
+            BookCover(item: item, width: 400, aspect: aspect, pixelWidth: 400)
+              .scaleEffect(fill)
+              .blur(radius: 70)
+              .opacity(0.55)
+              .frame(width: geo.size.width, height: geo.size.height)
+              .clipped()
+          }
+          Theme.bg.opacity(0.35)
+        }
+      }
+    }
     .task(id: itemId) { _ = await store.expandedItem(itemId) }
   }
 

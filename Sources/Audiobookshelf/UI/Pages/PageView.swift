@@ -7,7 +7,7 @@ struct PageView: View {
 
   var body: some View {
     ZStack {
-      Theme.pageGradient
+      PageBackground()
       switch route {
       case .home: HomePage()
       case .library: LibraryGridPage(filter: nil)
@@ -28,6 +28,7 @@ struct PageView: View {
       case .downloads: DownloadsPage()
       }
     }
+    .fadeUp()
     .id(route)
   }
 }
@@ -102,7 +103,7 @@ struct ItemSlider<Content: View>: View {
     let em = metrics.em
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 0) {
-        Text(title).font(Theme.sans(em, .semibold)).foregroundStyle(Theme.gray100)
+        Text(title).font(Theme.sans(Theme.modern ? em * 1.35 : em, Theme.modern ? .bold : .semibold)).foregroundStyle(Theme.gray100)
         Spacer()
         if geo.content > geo.container + 1 {
           chevron("chevron_left", enabled: geo.offset > 1) { scroll(-1) }
@@ -116,7 +117,9 @@ struct ItemSlider<Content: View>: View {
       ScrollView(.horizontal) {
         LazyHStack(alignment: .top, spacing: em) { content() }
           .padding(.trailing, 2 * em)
+          .padding(.vertical, Theme.modern ? 14 : 0)
       }
+      .padding(.vertical, Theme.modern ? -14 : 0)
       .scrollIndicators(.never)
       .scrollPosition($position)
       .onScrollGeometryChange(for: SliderGeometry.self) {

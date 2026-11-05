@@ -35,6 +35,11 @@ enum Theme {
   static var tableEven: Color { p.tableEven }
   /// `#bookshelf` / `#page-wrapper` background.
   static var pageGradient: LinearGradient { p.pageGradient }
+  static var pageGlow: [Glow] { p.glow }
+  /// The Modern Dark / Modern Light look: glass surfaces, pill controls, rounder corners.
+  static var modern: Bool { p.id.hasPrefix("modern") }
+  static var rSm: CGFloat { modern ? 10 : 6 }
+  static var rMd: CGFloat { modern ? 14 : 8 }
   static var isDark: Bool { p.isDark }
   static var scheme: ColorScheme { p.isDark ? .dark : .light }
   /// Dark glyphs on the white play disc drawn over cover art, any palette.
@@ -72,10 +77,111 @@ enum Theme {
   }
 }
 
+/// The page background: the palette gradient plus any radial glows.
+struct PageBackground: View {
+  var body: some View {
+    GeometryReader { geo in
+      ZStack {
+        Theme.pageGradient
+        ForEach(Array(Theme.pageGlow.enumerated()), id: \.offset) { _, g in
+          RadialGradient(
+            colors: [g.color, .clear], center: UnitPoint(x: g.x, y: g.y), startRadius: 0,
+            endRadius: max(geo.size.width, geo.size.height) * 0.6)
+        }
+      }
+    }
+  }
+}
+
+/// Modern surfaces are translucent over a blur (the web theme's default 40 % transparency).
+struct GlassBackground: ViewModifier {
+  let color: Color
+
+  func body(content: Content) -> some View {
+    if Theme.modern {
+      content.background {
+        ZStack {
+          Rectangle().fill(.ultraThinMaterial)
+          color.opacity(0.6)
+        }
+      }
+    } else {
+      content.background(color)
+    }
+  }
+}
+
+/// Modern cards lift and lean toward the pointer on hover.
+struct MagnetHover: ViewModifier {
+  @State private var hover = false
+  @State private var shift = CGSize.zero
+  @State private var size = CGSize.zero
+
+  func body(content: Content) -> some View {
+    if Theme.modern {
+      ZStack {
+        content
+          .scaleEffect(hover ? 1.02 : 1)
+          .offset(x: shift.width, y: shift.height - (hover ? 3 : 0))
+      }
+      .contentShape(Rectangle())
+      .zIndex(hover ? 1 : 0)
+      .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+      .onContinuousHover { phase in
+        switch phase {
+        case .active(let p):
+          let m = min(4, size.width * 0.02)
+          let dx = size.width > 0 ? (p.x - size.width / 2) / (size.width / 2) : 0
+          let dy = size.height > 0 ? (p.y - size.height / 2) / (size.height / 2) : 0
+          withAnimation(.easeOut(duration: 0.25)) {
+            hover = true
+            shift = CGSize(width: dx * m, height: dy * m)
+          }
+        case .ended:
+          withAnimation(.easeOut(duration: 0.4)) {
+            hover = false
+            shift = .zero
+          }
+        }
+      }
+    } else {
+      content
+    }
+  }
+}
+
+/// Modern pages fade up as they appear.
+struct FadeUp: ViewModifier {
+  @State private var shown = false
+
+  func body(content: Content) -> some View {
+    if Theme.modern {
+      content
+        .opacity(shown ? 1 : 0)
+        .offset(y: shown ? 0 : 8)
+        .onAppear { withAnimation(.easeOut(duration: 0.35)) { shown = true } }
+    } else {
+      content
+    }
+  }
+}
+
+extension View {
+  func glass(_ color: Color) -> some View { modifier(GlassBackground(color: color)) }
+  func magnetHover() -> some View { modifier(MagnetHover()) }
+  func fadeUp() -> some View { modifier(FadeUp()) }
+}
+
 /// One colour scheme. The stock palette is the web client's exact values;
 /// Nord, Catppuccin and Latte follow those MIT-licensed schemes; Light, Space
 /// and Princess are our own. All map onto the same roles, with the grey ramp
 /// mixed from text and background so contrast steps match the original.
+/// A soft radial wash over the page gradient, centred at a unit position.
+struct Glow {
+  let color: Color
+  let x, y: CGFloat
+}
+
 struct Palette: Identifiable, Equatable {
   let id: String
   let name: String
@@ -87,6 +193,7 @@ struct Palette: Identifiable, Equatable {
   let black300, black400, tableBorder, tableEven: Color
   let pageGradient: LinearGradient
   let swatch: [Color]
+  var glow: [Glow] = []
 
   static func == (a: Palette, b: Palette) -> Bool { a.id == b.id }
 
@@ -137,6 +244,22 @@ struct Palette: Identifiable, Equatable {
       "princess", "Princess", nil, dark: false, bg: 0xF1D3E0, primary: 0xFAE8F0,
       ink: 0x4A2141, accent: 0xC2185B, link: 0x8E44AD, yellow: 0xD4880F, error: 0xB3261E,
       info: 0x6A4C93, success: 0x2E7D5B, warning: 0xC56A1A, gradient: (0xF7E1EB, 0xE9C3D4)),
+    make(
+      "modern-dark", "Modern Dark", nil, dark: true, bg: 0x2B2E31, primary: 0x1C1E20, ink: 0xFFFFFF,
+      accent: 0xE5A00D, link: 0xE5A00D, yellow: 0xE5A00D, error: 0xFF5C5C, info: 0x3AA0FF,
+      success: 0x3EC28F, warning: 0xF2994A, gradient: (0x25282B, 0x16181A),
+      glow: [
+        Glow(color: Color(hex: 0xE5A00D, opacity: 0.22), x: 0.12, y: 0.08),
+        Glow(color: Color(hex: 0x3AA0FF, opacity: 0.16), x: 0.92, y: 0.85),
+      ]),
+    make(
+      "modern-light", "Modern Light", nil, dark: false, bg: 0xFFFFFF, primary: 0xECEEF0,
+      ink: 0x1F2326, accent: 0xE5A00D, link: 0xB97F08, yellow: 0xE5A00D, error: 0xFF5C5C,
+      info: 0x3AA0FF, success: 0x3EC28F, warning: 0xF2994A, gradient: (0xF7F8F9, 0xE2E5E8),
+      glow: [
+        Glow(color: Color(hex: 0xE5A00D, opacity: 0.25), x: 0.12, y: 0.08),
+        Glow(color: Color(hex: 0x3AA0FF, opacity: 0.18), x: 0.92, y: 0.85),
+      ]),
   ]
 
   static func named(_ id: String?) -> Palette? { all.first { $0.id == id } }
@@ -144,7 +267,7 @@ struct Palette: Identifiable, Equatable {
   private static func make(
     _ id: String, _ name: String, _ credit: String?, dark: Bool, bg: UInt32, primary: UInt32,
     ink: UInt32, accent: UInt32, link: UInt32, yellow: UInt32, error: UInt32, info: UInt32,
-    success: UInt32, warning: UInt32, gradient: (UInt32, UInt32)
+    success: UInt32, warning: UInt32, gradient: (UInt32, UInt32), glow: [Glow] = []
   ) -> Palette {
     // Where the stock greys sit between white text and the page, 0 = text.
     let steps = [0.06, 0.12, 0.2, 0.42, 0.58, 0.72, 0.82]
@@ -163,7 +286,7 @@ struct Palette: Identifiable, Equatable {
       pageGradient: LinearGradient(
         colors: [Color(hex: gradient.0), Color(hex: gradient.1)],
         startPoint: .topLeading, endPoint: .bottomTrailing),
-      swatch: [bg, primary, accent, yellow].map { Color(hex: $0) })
+      swatch: [bg, primary, accent, yellow].map { Color(hex: $0) }, glow: glow)
   }
 
   private static func mix(_ a: UInt32, _ b: UInt32, _ t: Double) -> Color {

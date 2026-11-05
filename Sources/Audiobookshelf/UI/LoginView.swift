@@ -18,7 +18,7 @@ struct LoginView: View {
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      Theme.pageGradient.ignoresSafeArea()
+      PageBackground().ignoresSafeArea()
       HStack(spacing: 16) {
         AppLogo().frame(width: 40, height: 40)
         Text("audiobookshelf").font(Theme.sans(20))

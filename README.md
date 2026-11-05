@@ -10,7 +10,7 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
     <td width="50%"><img src="docs/clips/browse.gif" alt="Scrolling the home page, then the library, series, authors and narrators"></td>
   </tr>
   <tr>
-    <td align="center"><b>Themes</b><br><sub>Light or dark in one click, or pick from seven</sub></td>
+    <td align="center"><b>Themes</b><br><sub>Light or dark in one click, or pick from nine</sub></td>
     <td align="center"><b>Browse</b><br><sub>Every page of the web client, native</sub></td>
   </tr>
   <tr>
@@ -40,9 +40,9 @@ A native Mac client for [Audiobookshelf](https://github.com/advplyr/audiobookshe
 
 ## Themes
 
-The sun/moon button in the top right flips between light and dark (`⌥⌘L`). Right-click it, or open Settings, for every theme: Audiobookshelf (the web client's colours), Light, Space (near-black with a purple glow), Nord, Catppuccin, Latte (Catppuccin's light flavour) and Princess (soft pink). "Match system appearance" follows macOS light and dark mode.
+The sun/moon button in the top right opens a menu with every theme (`⌥⌘L` still flips between light and dark): Audiobookshelf (the web client's colours), Light, Space (near-black with a purple glow), Nord, Catppuccin, Latte (Catppuccin's light flavour), Princess (soft pink), Modern Dark and Modern Light. "Match system appearance" follows macOS light and dark mode.
 
-![All seven themes: Audiobookshelf, Light, Space, Nord, Catppuccin, Latte and Princess](docs/themes.jpg)
+![The original seven themes: Audiobookshelf, Light, Space, Nord, Catppuccin, Latte and Princess](docs/themes.jpg)
 
 ## Keys
 

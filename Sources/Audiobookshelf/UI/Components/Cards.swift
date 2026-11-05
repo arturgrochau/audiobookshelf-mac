@@ -31,7 +31,9 @@ struct BookCard: View {
 
   private var progress: MediaProgress? { app.progress(for: item.id) }
 
-  var body: some View {
+  var body: some View { content.magnetHover() }
+
+  @ViewBuilder private var content: some View {
     let w = metrics.coverWidth
     let em = metrics.em
     VStack(alignment: .leading, spacing: 0) {
@@ -44,7 +46,7 @@ struct BookCard: View {
         }
       }
       .frame(width: w, height: metrics.coverHeight)
-      .clipShape(RoundedRectangle(cornerRadius: 6))
+      .clipShape(RoundedRectangle(cornerRadius: Theme.rSm))
       .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
       .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hover = h } }
       .onTapGesture { open() }
@@ -262,7 +264,9 @@ struct AuthorCard: View {
   var app = AppModel.shared
   @State private var hover = false
 
-  var body: some View {
+  var body: some View { content.magnetHover() }
+
+  @ViewBuilder private var content: some View {
     let w = 153.6 * m
     let h = 192 * m
     ZStack(alignment: .bottom) {
@@ -287,8 +291,8 @@ struct AuthorCard: View {
       .background(Color.black.opacity(0.6))
     }
     .frame(width: w, height: h)
-    .clipShape(RoundedRectangle(cornerRadius: 6))
-    .overlay(RoundedRectangle(cornerRadius: 6).stroke(hover ? Color.white.opacity(0.3) : .clear))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.rSm))
+    .overlay(RoundedRectangle(cornerRadius: Theme.rSm).stroke(hover ? Color.white.opacity(0.3) : .clear))
     .onHover { hover = $0 }
     .onTapGesture { app.go(.author(author.id)) }
   }
@@ -309,7 +313,9 @@ struct SeriesCard: View {
   var app = AppModel.shared
   @State private var hover = false
 
-  var body: some View {
+  var body: some View { content.magnetHover() }
+
+  @ViewBuilder private var content: some View {
     let h = metrics.coverHeight
     let w = metrics.coverWidth * 2
     let books = Array((series.books ?? []).prefix(10))
@@ -356,7 +362,7 @@ struct SeriesCard: View {
         }
       }
       .frame(width: w, height: h)
-      .clipShape(RoundedRectangle(cornerRadius: 6))
+      .clipShape(RoundedRectangle(cornerRadius: Theme.rSm))
       .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
       .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hover = h } }
       .onTapGesture { app.go(.seriesDetail(series.id)) }
