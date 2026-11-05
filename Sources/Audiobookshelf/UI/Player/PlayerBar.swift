@@ -29,8 +29,17 @@ struct PlayerBar: View {
     .padding(.bottom, 10)
     .frame(height: Theme.playerHeight)
     .frame(maxWidth: .infinity)
-    .background(Theme.primary)
-    .overlay(alignment: .top) { Theme.ink.opacity(0.06).frame(height: 1) }
+    .glass(Theme.primary)
+    .clipShape(RoundedRectangle(cornerRadius: Theme.modern ? 20 : 0))
+    .overlay(alignment: .top) { if !Theme.modern { Theme.ink.opacity(0.06).frame(height: 1) } }
+    .overlay {
+      if Theme.modern {
+        RoundedRectangle(cornerRadius: 20).stroke(Theme.ink.opacity(0.1))
+      }
+    }
+    .shadow(color: .black.opacity(Theme.modern ? 0.3 : 0), radius: 12, y: 6)
+    .padding(.horizontal, Theme.modern ? 12 : 0)
+    .padding(.bottom, Theme.modern ? 12 : 0)
   }
 
   private var aspect: Double { app.currentLibrary?.coverAspect ?? 1 }

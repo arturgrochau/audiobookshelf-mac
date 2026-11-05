@@ -19,12 +19,18 @@ struct WebButton<Label: View>: View {
         .foregroundStyle(Theme.ink(on: color ?? Theme.primary))
         .padding(.horizontal, paddingX ?? (small ? 16 : 32))
         .padding(.vertical, paddingY ?? (small ? 4 : 8))
+        .fontWeight(Theme.modern ? .semibold : nil)
         .background(color ?? Theme.primary)
         .overlay(hover && !disabled ? Theme.ink.opacity(0.1) : .clear)
         .overlay(disabled ? Color.black.opacity(0.2) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.gray600, lineWidth: 1))
-        .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.modern ? 999 : 6))
+        .overlay(
+          RoundedRectangle(cornerRadius: Theme.modern ? 999 : 6).stroke(
+            Theme.gray600, lineWidth: Theme.modern ? 0 : 1)
+        )
+        .shadow(color: .black.opacity(Theme.modern ? 0 : 0.25), radius: 3, y: 2)
+        .scaleEffect(Theme.modern && hover && !disabled ? 1.03 : 1)
+        .animation(.easeOut(duration: 0.2), value: hover)
     }
     .buttonStyle(.plain)
     .disabled(disabled)
@@ -58,8 +64,10 @@ struct IconButton: View {
         .frame(width: size, height: size)
         .background(bg ?? Theme.primary)
         .overlay(hover && !disabled ? Theme.ink.opacity(0.1) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.gray600, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.rSm))
+        .overlay(
+          RoundedRectangle(cornerRadius: Theme.rSm).stroke(
+            Theme.modern ? Theme.ink.opacity(0.1) : Theme.gray600, lineWidth: 1))
     }
     .buttonStyle(.plain)
     .disabled(disabled)
@@ -102,8 +110,17 @@ struct WebModal<Content: View>: View {
 
   var body: some View {
     ZStack {
-      Color.black.opacity(0.45)
-        .contentShape(Rectangle())
+      Group {
+        if Theme.modern {
+          ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+            Theme.primary.opacity(0.7)
+          }
+        } else {
+          Color.black.opacity(0.45)
+        }
+      }
+      .contentShape(Rectangle())
         .onTapGesture { isPresented = false }
       VStack(spacing: 0) {
         HStack {
@@ -121,9 +138,10 @@ struct WebModal<Content: View>: View {
       }
       .frame(width: width)
       .frame(minWidth: 380)
-      .background(RoundedRectangle(cornerRadius: 14).fill(Theme.primary))
-      .clipShape(RoundedRectangle(cornerRadius: 14))
-      .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.ink.opacity(0.08)))
+      .glass(Theme.primary)
+      .clipShape(RoundedRectangle(cornerRadius: Theme.modern ? 20 : 14))
+      .overlay(
+        RoundedRectangle(cornerRadius: Theme.modern ? 20 : 14).stroke(Theme.ink.opacity(0.08)))
       .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
       .environment(\.colorScheme, Theme.scheme)
     }

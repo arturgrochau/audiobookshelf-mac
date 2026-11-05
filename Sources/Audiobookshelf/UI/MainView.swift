@@ -30,7 +30,7 @@ struct MainView: View {
     VStack(spacing: 0) {
       AppBar().zIndex(2)
       HStack(spacing: 0) {
-        SideRail()
+        SideRail().zIndex(1)
         PageView(route: app.route)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
@@ -38,7 +38,7 @@ struct MainView: View {
         PlayerBar()
       }
     }
-    .background(Theme.bg)
+    .background { if Theme.modern { PageBackground().ignoresSafeArea() } else { Theme.bg } }
     .overlay {
       if player.showSleepTimer { SleepTimerModal() }
       if player.showChapters { ChaptersModal() }
@@ -86,7 +86,7 @@ struct AppBar: View {
         .padding(.trailing, 14)
     }
     .frame(height: Theme.appBarHeight)
-    .background(Theme.primary)
+    .background { Color.clear.glass(Theme.primary).ignoresSafeArea(edges: .top) }
     .overlay(alignment: .bottom) { Theme.ink.opacity(0.06).frame(height: 1) }
     .gesture(WindowDragGesture())
     .allowsWindowActivationEvents(true)
@@ -147,28 +147,28 @@ struct LibraryPicker: View {
   }
 }
 
-/// Sun or moon: flips between the last light and last dark theme used.
-/// Right-click lists every theme.
+/// Sun or moon: opens the list of every theme.
 struct ThemeToggle: View {
   var store = ThemeStore.shared
   @State private var hover = false
 
   var body: some View {
-    Button {
-      withAnimation(.easeInOut(duration: 0.2)) { store.toggleLightDark() }
+    Menu {
+      ThemeMenuItems()
     } label: {
       Image(systemName: store.palette.isDark ? "moon.fill" : "sun.max.fill")
         .font(.system(size: 15, weight: .regular))
         .foregroundStyle(hover ? Theme.ink : Theme.gray300)
-        .contentTransition(.symbolEffect(.replace))
         .frame(width: 32, height: 32)
         .background(Circle().fill(Theme.ink.opacity(hover ? 0.08 : 0)))
         .contentShape(Circle())
     }
+    .menuStyle(.button)
     .buttonStyle(.plain)
+    .menuIndicator(.hidden)
+    .fixedSize()
     .onHover { hover = $0 }
-    .contextMenu { ThemeMenuItems() }
-    .help(store.palette.isDark ? "Switch to \(store.lastLight.name)" : "Switch to \(store.lastDark.name)")
+    .help("Theme: \(store.palette.name)")
   }
 }
 
@@ -281,7 +281,7 @@ struct SideRail: View {
     }
     .padding(.top, 10)
     .frame(width: Theme.railWidth)
-    .background(Theme.primary)
+    .glass(Theme.primary)
     .overlay(alignment: .trailing) { Theme.ink.opacity(0.06).frame(width: 1) }
   }
 
@@ -319,8 +319,8 @@ private struct RailButton: View {
       .foregroundStyle(active ? Theme.accent : hover ? Theme.ink : Theme.gray400)
       .frame(width: Theme.railWidth - 12, height: 54)
       .background(
-        RoundedRectangle(cornerRadius: 8)
-          .fill(active ? Theme.accent.opacity(0.12) : Theme.ink.opacity(hover ? 0.06 : 0))
+        RoundedRectangle(cornerRadius: Theme.rMd)
+          .fill(active ? Theme.accent.opacity(Theme.modern ? 0.22 : 0.12) : Theme.ink.opacity(hover ? 0.06 : 0))
       )
       .contentShape(Rectangle())
     }
@@ -369,19 +369,29 @@ struct GlobalSearch: View {
     }
     .padding(.horizontal, 10)
     .frame(width: 320, height: 28)
-    .background(RoundedRectangle(cornerRadius: 7).fill(Theme.ink.opacity(focused ? 0.1 : 0.06)))
+    .background(
+      RoundedRectangle(cornerRadius: Theme.modern ? 14 : 7)
+        .fill(Theme.ink.opacity(focused ? 0.1 : 0.06))
+    )
     .overlay(
-      RoundedRectangle(cornerRadius: 7).stroke(
-        focused ? Theme.accent.opacity(0.6) : Theme.ink.opacity(0.08)))
+      RoundedRectangle(cornerRadius: Theme.modern ? 14 : 7).stroke(
+        focused ? Theme.accent.opacity(0.6) : Theme.ink.opacity(0.08))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: Theme.modern ? 14 : 7)
+        .stroke(Theme.accent.opacity(Theme.modern && focused ? 0.25 : 0), lineWidth: 3)
+    )
     // An in-window overlay, not a popover: a popover is its own window and
     // takes the keystrokes that follow while typing.
     .overlay(alignment: .topLeading) {
       if showResults {
         SearchSuggestions(results: results) { showResults = false }
           .frame(width: 320)
-          .background(Theme.bg)
-          .clipShape(RoundedRectangle(cornerRadius: 4))
-          .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.gray600))
+          .glass(Theme.bg)
+          .clipShape(RoundedRectangle(cornerRadius: Theme.modern ? 14 : 4))
+          .overlay(
+            RoundedRectangle(cornerRadius: Theme.modern ? 14 : 4).stroke(
+              Theme.modern ? Theme.ink.opacity(0.1) : Theme.gray600))
           .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
           .offset(y: 36)
           .fixedSize(horizontal: false, vertical: true)

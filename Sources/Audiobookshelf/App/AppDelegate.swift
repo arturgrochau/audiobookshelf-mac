@@ -189,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     guard p.hasItem, !modalOpen else { return false }
     // Speed letters follow the layout (a physical key code would be A=Q on AZERTY).
     if mods.isEmpty, !e.isARepeat,
-      let r = ["s": 2, "a": 1.5, "x": 1.2, "z": 1][
+      let r = ["s": 2.0, "a": 1.5, "x": 1.2, "z": 1.0][
         e.charactersIgnoringModifiers?.lowercased() ?? ""]
     {
       p.toggleRate(r)

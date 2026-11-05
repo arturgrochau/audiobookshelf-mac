@@ -1,6 +1,6 @@
 import Foundation
 
-public enum APIError: Error, Sendable, CustomStringConvertible {
+public enum APIError: Error, Sendable, CustomStringConvertible, LocalizedError {
   case http(Int, String)
   case unauthorized
   case rateLimited
@@ -20,6 +20,8 @@ public enum APIError: Error, Sendable, CustomStringConvertible {
     case .noServer: return "Server could not be reached"
     }
   }
+
+  public var errorDescription: String? { description }
 }
 
 /// Access + refresh token pair with single-flight refresh. The server rotates
